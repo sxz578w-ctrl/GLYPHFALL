@@ -8,7 +8,6 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.WebChromeClient;
-import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -107,18 +106,6 @@ public final class MainActivity extends Activity {
         public void onPageFinished(@NonNull WebView view, @NonNull String url) {
             if (GAME_URL.equals(url)) pageLoaded = true;
             super.onPageFinished(view, url);
-        }
-
-        @Override
-        public void onReceivedError(@NonNull WebView view,
-                                    @NonNull WebResourceRequest request,
-                                    @NonNull WebResourceError error) {
-            super.onReceivedError(view, request, error);
-            if (request.isForMainFrame()) {
-                Toast.makeText(MainActivity.this,
-                        "تعذر تحميل اللعبة. تحقق من اتصال الإنترنت ثم أعد التشغيل.",
-                        Toast.LENGTH_LONG).show();
-            }
         }
     }
 
