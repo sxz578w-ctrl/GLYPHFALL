@@ -464,8 +464,7 @@ func _build_settings_panel() -> void:
     var back := _button("عودة  /  BACK", Color(0.84, 0.6, 0.27), false)
     back.pressed.connect(_close_settings)
     column.add_child(back)
-    _hud_root.add_child(_settings_panel)
-    _menu_root.add_child(_settings_panel.duplicate())
+    add_child(_settings_panel)
 
 func _open_settings() -> void:
     _settings_panel.visible = true
@@ -632,16 +631,12 @@ func _separator() -> Control:
 
 func _glass_panel() -> PanelContainer:
     var panel := PanelContainer.new()
-    panel.add_theme_stylebox_override("panel", _panel_style(Color(0.018, 0.032, 0.065, 0.82), Color(0.2, 0.56, 0.8, 0.46), 12))
-    var margin := MarginContainer.new()
-    margin.add_theme_constant_override("margin_left", 15)
-    margin.add_theme_constant_override("margin_right", 15)
-    margin.add_theme_constant_override("margin_top", 13)
-    margin.add_theme_constant_override("margin_bottom", 13)
-    panel.add_child(margin)
-    var column := VBoxContainer.new()
-    column.add_theme_constant_override("separation", 9)
-    margin.add_child(column)
+    var style := _panel_style(Color(0.018, 0.032, 0.065, 0.82), Color(0.2, 0.56, 0.8, 0.46), 12)
+    style.content_margin_left = 15
+    style.content_margin_right = 15
+    style.content_margin_top = 13
+    style.content_margin_bottom = 13
+    panel.add_theme_stylebox_override("panel", style)
     return panel
 
 func _panel_style(background: Color, border: Color, radius: int) -> StyleBoxFlat:
@@ -666,16 +661,12 @@ func _overlay_panel() -> PanelContainer:
     overlay.offset_right = 210
     overlay.offset_top = -205
     overlay.offset_bottom = 205
-    overlay.add_theme_stylebox_override("panel", _panel_style(Color(0.02, 0.045, 0.09, 0.97), Color(0.28, 0.72, 0.98), 15))
-    var margin := MarginContainer.new()
-    margin.add_theme_constant_override("margin_left", 22)
-    margin.add_theme_constant_override("margin_right", 22)
-    margin.add_theme_constant_override("margin_top", 24)
-    margin.add_theme_constant_override("margin_bottom", 24)
-    overlay.add_child(margin)
-    var content := VBoxContainer.new()
-    content.add_theme_constant_override("separation", 12)
-    margin.add_child(content)
+    var style := _panel_style(Color(0.02, 0.045, 0.09, 0.97), Color(0.28, 0.72, 0.98), 15)
+    style.content_margin_left = 22
+    style.content_margin_right = 22
+    style.content_margin_top = 24
+    style.content_margin_bottom = 24
+    overlay.add_theme_stylebox_override("panel", style)
     return overlay
 
 func _class_emblem(class_id: String) -> String:
