@@ -12,6 +12,7 @@ signal new_game_requested
 signal retry_requested
 signal purchase_requested(item_id: String)
 signal merchant_closed
+signal section_requested(section_id: String)
 
 const WorldRules = preload("res://scripts/world_rules.gd")
 const VirtualJoystickScript = preload("res://scripts/virtual_joystick.gd")
@@ -58,7 +59,9 @@ var _energy_bar: ProgressBar
 var _shards_label: Label
 var _zone_label: Label
 var _objective_label: Label
+var _progress_label: Label
 var _status_label: Label
+var _info_panel: PanelContainer
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
@@ -79,8 +82,11 @@ func show_menu() -> void:
         _game_over_panel.visible = false
     if _keeper_panel != null:
         _keeper_panel.visible = false
+    if _info_panel != null:
+        _info_panel.visible = false
 
 func show_hud() -> void:
+    hide_intel_panel()
     _menu_root.visible = false
     _hud_root.visible = true
     _pause_panel.visible = false
@@ -137,6 +143,37 @@ func update_hud(shards: int, zone_name: String, objective: String) -> void:
     if _objective_label != null:
         _objective_label.text = objective
 
+func update_progress(completed: int, total: int, kills: int, deaths: int) -> void:
+    if _progress_label == null:
+        return
+    _progress_label.text = "STORY  %d/%d   •   KILLS  %d   •   FALLS  %d" % [completed, total, kills, deaths]
+
+func show_intel_panel(title_text: String, entries: Array) -> void:
+    hide_intel_panel()
+    _info_panel = _overlay_panel()
+    _info_panel.name = "FrontierIntelPanel"
+    _info_panel.offset_top = -220
+    _info_panel.offset_bottom = 220
+    var column := VBoxContainer.new()
+    column.add_theme_constant_override("separation", 9)
+    column.add_child(_label("FRONTIER DATABASE", 9, Color(0.37, 0.78, 1.0)))
+    column.add_child(_label(title_text, 22, Color(0.92, 0.97, 1.0)))
+    column.add_child(_separator())
+    for entry in entries:
+        var line := _label(str(entry), 11, Color(0.75, 0.86, 0.97))
+        line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        column.add_child(line)
+    var close := _button("إغلاق  /  CLOSE", Color(0.82, 0.56, 0.3), false)
+    close.pressed.connect(hide_intel_panel)
+    column.add_child(close)
+    _info_panel.add_child(column)
+    _menu_root.add_child(_info_panel)
+
+func hide_intel_panel() -> void:
+    if _info_panel != null:
+        _info_panel.queue_free()
+        _info_panel = null
+
 func set_status(message: String) -> void:
     if _status_label != null:
         _status_label.text = message
@@ -172,7 +209,9 @@ func get_visual_contract() -> Dictionary:
         "roster_mode": "single_screen",
         "menu_art": MENU_ART_PATH,
         "intro_animation": true,
-        "action_icon_count": ICON_PATHS.size()
+        "action_icon_count": ICON_PATHS.size(),
+        "quest_panel": true,
+        "navigation_sections": 3
     }
 
 func _play_intro_sequence() -> void:
@@ -496,6 +535,8 @@ func _build_hud() -> void:
     _objective_label = _label("استكشف البراري وابحث عن أول مرساة.", 12, Color(0.95, 0.97, 1.0))
     _objective_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     objective_column.add_child(_objective_label)
+    _progress_label = _label("STORY  0/7   •   KILLS  0   •   FALLS  0", 8, Color(0.52, 0.76, 0.92))
+    objective_column.add_child(_progress_label)
     objective_panel.add_child(objective_column)
     _hud_root.add_child(objective_panel)
 
@@ -731,7 +772,20 @@ func _add_nav_button(parent: VBoxContainer, text_value: String, emblem: String, 
     button.add_theme_color_override("font_color", Color(0.92, 0.97, 1.0))
     button.add_theme_stylebox_override("normal", _panel_style(Color(0.035, 0.065, 0.11, 0.76), accent.darkened(0.35), 8))
     button.add_theme_stylebox_override("hover", _panel_style(Color(0.08, 0.15, 0.24, 0.9), accent, 8))
-    button.pressed.connect(func(): _status_label.text = text_value)
+    var section_id := "home"
+    if text_value.contains("HEROES"):
+        section_id = "heroes"
+    elif text_value.contains("MISSIONS"):
+        section_id = "missions"
+    elif text_value.contains("ARMORY"):
+        section_id = "armory"
+    button.pressed.connect(func():
+        _status_label.text = text_value
+        if section_id == "home":
+            hide_intel_panel()
+        else:
+            section_requested.emit(section_id)
+    )
     parent.add_child(button)
 
 func _mini_info_panel(title: String, icon_text: String, accent: Color) -> Control:

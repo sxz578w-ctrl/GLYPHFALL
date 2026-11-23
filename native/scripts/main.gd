@@ -6,18 +6,24 @@ const PlayerControllerScript = preload("res://scripts/player_controller.gd")
 const EncounterManagerScript = preload("res://scripts/encounter_manager.gd")
 const GameUIScript = preload("res://scripts/game_ui.gd")
 const SaveServiceScript = preload("res://scripts/save_service.gd")
+const ProgressionService = preload("res://scripts/progression_service.gd")
 
 var world: WorldBuilder
 var player: PlayerController
 var encounters: EncounterManager
 var game_ui: GameUI
 var save_data: Dictionary
+var progression: Dictionary
 var _playing: bool = false
 var _hud_refresh: float = 0.0
+var _playtime_buffer: float = 0.0
 
 func _ready() -> void:
     save_data = SaveServiceScript.load_save()
+    progression = ProgressionService.normalise(save_data.get("progression", {}))
     _create_world()
+    for restored_site in progression["restored_sites"]:
+        world.restore_site_anchor(str(restored_site))
     _create_player()
     _create_encounters()
     _create_ui()
@@ -47,7 +53,12 @@ func _create_encounters() -> void:
     encounters = EncounterManagerScript.new()
     encounters.name = "EncounterManager"
     add_child(encounters)
-    encounters.configure(player, world)
+    encounters.configure(
+        player,
+        world,
+        progression["discovered_sites"],
+        progression["cleared_sites"]
+    )
 
 func _create_ui() -> void:
     game_ui = GameUIScript.new()
@@ -66,6 +77,9 @@ func _connect_systems() -> void:
     game_ui.retry_requested.connect(_retry_at_safe_haven)
     game_ui.purchase_requested.connect(_on_keeper_purchase)
     game_ui.merchant_closed.connect(_close_keeper)
+    game_ui.section_requested.connect(_on_menu_section_requested)
+    encounters.site_discovered.connect(_on_site_discovered)
+    encounters.site_cleared.connect(_on_site_cleared)
     player.health_changed.connect(game_ui.update_health)
     player.energy_changed.connect(game_ui.update_energy)
     player.defeated.connect(_on_player_defeated)
@@ -74,6 +88,7 @@ func _connect_systems() -> void:
 func _start_game() -> void:
     get_tree().paused = false
     _playing = true
+    _playtime_buffer = 0.0
     player.set_physics_process(true)
     encounters.set_process(true)
     game_ui.show_hud()
@@ -132,14 +147,110 @@ func _on_action_requested(action_id: String) -> void:
                 get_tree().paused = true
                 game_ui.show_keeper(player.shards)
             else:
-                game_ui.notify_event("لا يوجد تاجر قريب. عد إلى الملاذ الآمن.")
+                _try_restore_current_anchor()
         "rebuild":
             if WorldRules.is_safe_haven(player.global_position):
                 player.restore_health(24.0)
                 player.restore_energy(28.0)
                 game_ui.notify_event("تم ترميم طاقتك داخل الملاذ الآمن.")
             else:
-                game_ui.notify_event("اقترب من أثر قابل للترميم لإعادة بناء المنطقة.")
+                _try_restore_current_anchor()
+
+func _try_restore_current_anchor() -> void:
+    var site_id := encounters.get_current_site_id()
+    if site_id.is_empty():
+        game_ui.notify_event("لا توجد مرساة معروفة في هذا الموقع.")
+        return
+    if ProgressionService.is_site_restored(progression, site_id):
+        game_ui.notify_event("هذه المرساة أعيد بناؤها بالفعل.")
+        return
+    if not encounters.is_site_cleared(site_id):
+        game_ui.notify_event("لا يمكن الترميم قبل تطهير الموقع. المتبقي: %d" % encounters.get_site_remaining(site_id))
+        return
+
+    var site_center := Vector3.ZERO
+    var found := false
+    for site in world.get_encounter_sites():
+        if str(site["id"]) == site_id:
+            site_center = site["center"]
+            found = true
+            break
+    if not found:
+        game_ui.notify_event("تعذر تحديد موقع المرساة.")
+        return
+    var distance := Vector2(player.global_position.x - site_center.x, player.global_position.z - site_center.z).length()
+    if distance > 13.0:
+        game_ui.notify_event("اقترب من البلورة المركزية للمرساة.")
+        return
+
+    const RESTORE_COST: int = 30
+    if player.shards < RESTORE_COST:
+        game_ui.notify_event("تحتاج إلى 30 شظية لإعادة بناء المرساة.")
+        return
+    if not world.restore_site_anchor(site_id):
+        game_ui.notify_event("تعذر تشغيل المرساة. حاول مجدداً.")
+        return
+
+    player.shards -= RESTORE_COST
+    progression = ProgressionService.mark_site_restored(progression, site_id)
+    game_ui.notify_event("تمت إعادة بناء المرساة. عاد جزء من العالم إلى الحياة.")
+    game_ui.update_hud(player.shards, _current_zone_title(), str(ProgressionService.current_objective(progression)["description_ar"]))
+    _refresh_hud()
+    _persist_save()
+
+func _on_site_discovered(site_id: String) -> void:
+    if ProgressionService.is_site_discovered(progression, site_id):
+        return
+    progression = ProgressionService.mark_site_discovered(progression, site_id)
+    game_ui.notify_event("تم اكتشاف منطقة جديدة: " + site_id.to_upper())
+    _refresh_hud()
+    _persist_save()
+
+func _on_site_cleared(site_id: String) -> void:
+    if ProgressionService.is_site_cleared(progression, site_id):
+        return
+    progression = ProgressionService.mark_site_cleared(progression, site_id)
+    player.shards += 25
+    game_ui.notify_event("تم تطهير الموقع. مكافأة إكمال: +25 شظية")
+    _refresh_hud()
+    _persist_save()
+
+func _on_menu_section_requested(section_id: String) -> void:
+    var entries: Array[String] = []
+    match section_id:
+        "heroes":
+            for profile in WorldRules.all_class_profiles():
+                entries.append("%s — %s | %s | %s" % [
+                    profile["title"],
+                    profile["name"],
+                    profile["weapon_ar"],
+                    profile["ability_ar"]
+                ])
+            game_ui.show_intel_panel("دليل الفئات / HERO CODEX", entries)
+        "missions":
+            for step in ProgressionService.QUEST_STEPS:
+                var done := false
+                var site_id := str(step["site_id"])
+                match str(step["kind"]):
+                    "discover":
+                        done = ProgressionService.is_site_discovered(progression, site_id)
+                    "clear":
+                        done = ProgressionService.is_site_cleared(progression, site_id)
+                    "restore":
+                        done = ProgressionService.is_site_restored(progression, site_id)
+                    "return":
+                        done = ProgressionService.is_campaign_complete(progression)
+                entries.append("%s  %s" % ["✓" if done else "○", step["title_ar"]])
+            game_ui.show_intel_panel("سجل الرحلة / QUEST LOG", entries)
+        "armory":
+            entries.append("الشظايا المتاحة: %d" % int(player.shards))
+            entries.append("إتقان السلاح: %d / 10" % int(player.damage_rank))
+            entries.append("الحيوية: %d / 10" % int(player.vitality_rank))
+            entries.append("ترقية الضرر تكلف 45 شظية، وترقية الحيوية تكلف 40.")
+            entries.append("استخدم تاجر الملاذ لشراء الجرعات والترقيات الدائمة.")
+            game_ui.show_intel_panel("ترسانة الملاذ / ARMORY", entries)
+    if section_id == "home":
+        game_ui.hide_intel_panel()
 
 func _on_keeper_purchase(item_id: String) -> void:
     var costs: Dictionary = {
@@ -189,7 +300,8 @@ func _close_keeper() -> void:
 
 func _on_shards_awarded(amount: int) -> void:
     player.shards += amount
-    game_ui.update_hud(player.shards, _current_zone_title(), "اجمع الشظايا وطوّر سلاحك من الملاذ الآمن.")
+    progression = ProgressionService.record_kill(progression)
+    game_ui.update_hud(player.shards, _current_zone_title(), str(ProgressionService.current_objective(progression)["description_ar"]))
     game_ui.notify_event("+%d SHARDS  •  تم جمع الشظايا" % amount)
     _persist_save()
 
@@ -197,9 +309,11 @@ func _on_player_defeated() -> void:
     if not _playing:
         return
     _playing = false
+    progression = ProgressionService.record_death(progression)
     get_tree().paused = true
     player.set_physics_process(false)
     game_ui.show_game_over()
+    _persist_save()
 
 func _current_zone_title() -> String:
     if WorldRules.is_safe_haven(player.global_position):
@@ -215,20 +329,32 @@ func _process(delta: float) -> void:
     if not _playing:
         return
     _hud_refresh += delta
+    _playtime_buffer += delta
+    if _playtime_buffer >= 10.0:
+        progression = ProgressionService.add_play_time(progression, _playtime_buffer)
+        _playtime_buffer = 0.0
+        _persist_save()
     if _hud_refresh >= 0.14:
         _hud_refresh = 0.0
         _refresh_hud()
 
 func _refresh_hud() -> void:
     var zone_name := _current_zone_title()
-    var objective := "تحدّث مع الحارس وجهّز أسلحتك قبل الرحيل."
-    if zone_name.begins_with("MIRKWOOD"):
-        objective = "استكشف الغابة وواجه الحراس داخل نطاقها."
-    elif zone_name.begins_with("SUNKEN"):
-        objective = "عطّل الشذوذ واستعد البلورة القديمة."
-    elif zone_name.begins_with("THE OUTSKIRTS"):
-        objective = "استكشف أطراف العالم وابحث عن مواقع المراسي."
-    game_ui.update_hud(player.shards, zone_name, objective)
+    var objective: Dictionary = ProgressionService.current_objective(progression)
+    if str(objective["id"]) == "return_haven" and WorldRules.is_safe_haven(player.global_position):
+        var was_complete := ProgressionService.is_campaign_complete(progression)
+        progression = ProgressionService.mark_returned_to_haven(progression)
+        if not was_complete and ProgressionService.is_campaign_complete(progression):
+            game_ui.notify_event("اكتملت الرحلة الأولى. المراسي عادت إلى العمل.")
+            _persist_save()
+        objective = ProgressionService.current_objective(progression)
+    game_ui.update_hud(player.shards, zone_name, str(objective["description_ar"]))
+    game_ui.update_progress(
+        ProgressionService.completed_steps(progression),
+        ProgressionService.TOTAL_STEPS,
+        int(progression["kills"]),
+        int(progression["deaths"])
+    )
 
 func _apply_quality(quality: String) -> void:
     save_data["quality"] = quality
@@ -256,6 +382,7 @@ func _persist_save() -> void:
     save_data["shards"] = player.shards
     save_data["damage_rank"] = player.damage_rank
     save_data["vitality_rank"] = player.vitality_rank
+    save_data["progression"] = progression
     SaveServiceScript.write_save(save_data)
 
 func _on_quality_changed(quality: String) -> void:

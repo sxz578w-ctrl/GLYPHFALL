@@ -696,7 +696,7 @@ func _build_site_markers() -> void:
             _add_box(marker_root, "SitePylonGlyph", Vector3(0.18, 2.2, 0.16), marker_position + Vector3(0.0, 2.3, -0.4), _emissive_material(accent, 1.8))
 
 func restore_site_anchor(site_id: String) -> bool:
-    if not WorldRules.VALID_CLASSES.has(site_id) and not ["mirkwood", "sunken_grove"].has(site_id):
+    if not ["mirkwood", "sunken_grove"].has(site_id):
         return false
     if _restored_anchor_ids.has(site_id):
         return true

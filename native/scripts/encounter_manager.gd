@@ -6,6 +6,7 @@ signal site_discovered(site_id: String)
 signal site_cleared(site_id: String)
 
 const EnemySceneScript = preload("res://scripts/enemy_controller.gd")
+const ProgressionService = preload("res://scripts/progression_service.gd")
 
 var player: PlayerController
 var world_builder: WorldBuilder
