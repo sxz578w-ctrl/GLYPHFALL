@@ -33,6 +33,8 @@ var _body_root: Node3D
 var _camera_arm: SpringArm3D
 var _camera: Camera3D
 var _last_move_direction := Vector3.FORWARD
+var _look_touch_index: int = -1
+var _look_sensitivity: float = 0.0032
 
 func _ready() -> void:
     name = "Player"
@@ -60,6 +62,24 @@ func select_class(new_class_id: String) -> void:
 func set_mobile_move(direction: Vector2) -> void:
     _mobile_move = direction.limit_length(1.0)
     _mobile_move_active = _mobile_move.length() > 0.05
+
+func _input(event: InputEvent) -> void:
+    var viewport_size := get_viewport().get_visible_rect().size
+    if event is InputEventScreenTouch:
+        if event.pressed:
+            var in_camera_area := event.position.x > viewport_size.x * 0.46
+            var above_action_buttons := event.position.y < viewport_size.y * 0.7
+            if in_camera_area and above_action_buttons:
+                _look_touch_index = event.index
+        elif event.index == _look_touch_index:
+            _look_touch_index = -1
+    elif event is InputEventScreenDrag and event.index == _look_touch_index:
+        _camera_arm.rotation.y -= event.relative.x * _look_sensitivity
+        _camera_arm.rotation.x = clampf(
+            _camera_arm.rotation.x + event.relative.y * _look_sensitivity,
+            deg_to_rad(-28.0),
+            deg_to_rad(5.0)
+        )
 
 func clear_mobile_move() -> void:
     _mobile_move = Vector2.ZERO
