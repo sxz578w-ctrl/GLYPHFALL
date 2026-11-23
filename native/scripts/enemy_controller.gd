@@ -129,3 +129,41 @@ func _create_visual(tint: Color) -> void:
     core_material.emission_energy_multiplier = 2.4
     core.material_override = core_material
     add_child(core)
+
+    var head := MeshInstance3D.new()
+    var head_mesh := SphereMesh.new()
+    head_mesh.radius = 0.47
+    head_mesh.height = 0.72
+    head.mesh = head_mesh
+    head.position = Vector3(0.0, 2.02, -0.06)
+    head.material_override = material
+    add_child(head)
+
+    for side in [-1.0, 1.0]:
+        var horn := MeshInstance3D.new()
+        var horn_mesh := PrismMesh.new()
+        horn_mesh.size = Vector3(0.32, 1.0, 0.34)
+        horn.mesh = horn_mesh
+        horn.position = Vector3(side * 0.38, 2.48, -0.04)
+        horn.rotation_degrees.z = side * -22.0
+        horn.material_override = core_material
+        add_child(horn)
+
+        var arm := MeshInstance3D.new()
+        var arm_mesh := CapsuleMesh.new()
+        arm_mesh.radius = 0.2
+        arm_mesh.height = 1.1
+        arm.mesh = arm_mesh
+        arm.position = Vector3(side * 0.68, 1.1, 0.02)
+        arm.rotation_degrees.z = side * 18.0
+        arm.material_override = material
+        add_child(arm)
+
+    var lower_core := MeshInstance3D.new()
+    var lower_mesh := SphereMesh.new()
+    lower_mesh.radius = 0.22
+    lower_mesh.height = 0.44
+    lower_core.mesh = lower_mesh
+    lower_core.position = Vector3(0.0, 0.46, -0.4)
+    lower_core.material_override = core_material
+    add_child(lower_core)
