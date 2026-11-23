@@ -14,6 +14,8 @@ var health: float = 145.0
 var max_energy: float = 110.0
 var energy: float = 110.0
 var shards: int = 0
+var damage_rank: int = 0
+var vitality_rank: int = 0
 
 var _mobile_move := Vector2.ZERO
 var _mobile_move_active := false
@@ -44,12 +46,12 @@ func _ready() -> void:
 func select_class(new_class_id: String) -> void:
     var profile := WorldRules.class_profile(new_class_id)
     class_id = str(profile["id"])
-    max_health = float(profile["health"])
+    max_health = float(profile["health"]) + float(vitality_rank) * 12.0
     max_energy = float(profile["stamina"])
     health = max_health
     energy = max_energy
     _move_speed = float(profile["speed"])
-    _damage_multiplier = float(profile["damage"])
+    _damage_multiplier = float(profile["damage"]) + float(damage_rank) * 0.055
     _guard_multiplier = float(profile["guard"])
     _rebuild_visual_model(profile)
     health_changed.emit(health, max_health)
@@ -143,6 +145,20 @@ func restore_health(amount: float) -> void:
 func restore_energy(amount: float) -> void:
     energy = minf(max_energy, energy + maxf(0.0, amount))
     energy_changed.emit(energy, max_energy)
+
+func purchase_upgrade(upgrade_id: String) -> bool:
+    if upgrade_id == "damage" and damage_rank < 10:
+        damage_rank += 1
+        var profile := WorldRules.class_profile(class_id)
+        _damage_multiplier = float(profile["damage"]) + float(damage_rank) * 0.055
+        return true
+    if upgrade_id == "vitality" and vitality_rank < 10:
+        vitality_rank += 1
+        max_health += 12.0
+        health = minf(max_health, health + 35.0)
+        health_changed.emit(health, max_health)
+        return true
+    return false
 
 func reset_at_spawn(spawn_position: Vector3) -> void:
     global_position = spawn_position
