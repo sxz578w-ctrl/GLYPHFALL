@@ -21,7 +21,7 @@ func _gui_input(event: InputEvent) -> void:
         else:
             _release_stick()
     elif event is InputEventScreenDrag and _pressed:
-        _update_direction(to_local(event.position))
+        _update_direction(_screen_to_local(event.position))
     elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
         _pressed = event.pressed
         if _pressed:
