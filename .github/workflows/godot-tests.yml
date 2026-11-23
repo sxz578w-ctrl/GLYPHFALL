@@ -35,8 +35,11 @@ jobs:
         run: |
           timeout 90s godot --headless --path native --script res://tests/test_world_rules.gd
           godot --headless --path native --script res://tests/test_combat_rules.gd
+      - name: Progression service tests
+        run: godot --headless --path native --script res://tests/test_progression_service.gd
       - name: Save service tests
         run: godot --headless --path native --script res://tests/test_save_service.gd
+          godot --headless --path native --script res://tests/test_progression.gd
       - name: World builder tests
         run: timeout 60s godot --headless --path native --script res://tests/test_world_builder.gd
       - name: UI contract tests
