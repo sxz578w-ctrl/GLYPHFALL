@@ -29,6 +29,7 @@ var _encounter_sites: Array[Dictionary] = [
 ]
 
 var _materials: Dictionary = {}
+var _restored_anchor_ids: Dictionary = {}
 var _built: bool = false
 
 func _ready() -> void:
@@ -675,6 +676,7 @@ func get_visual_contract() -> Dictionary:
         "tree_species": 3,
         "architecture_modules": 18,
         "art_direction": "eclipse_frontier",
+        "restored_anchor_support": true,
         "rendering": "mobile_pbr_multimesh"
     }
 
@@ -692,6 +694,93 @@ func _build_site_markers() -> void:
             var marker_position := Vector3(float(side) * radius * 0.42, 0.0, -radius - 5.0)
             _add_box(marker_root, "SitePylon", Vector3(0.72, 4.3, 0.72), marker_position + Vector3(0.0, 2.15, 0.0), stone)
             _add_box(marker_root, "SitePylonGlyph", Vector3(0.18, 2.2, 0.16), marker_position + Vector3(0.0, 2.3, -0.4), _emissive_material(accent, 1.8))
+
+func restore_site_anchor(site_id: String) -> bool:
+    if not WorldRules.VALID_CLASSES.has(site_id) and not ["mirkwood", "sunken_grove"].has(site_id):
+        return false
+    if _restored_anchor_ids.has(site_id):
+        return true
+
+    for site in _encounter_sites:
+        if str(site["id"]) != site_id:
+            continue
+        var center: Vector3 = site["center"]
+        var accent: Color = site["accent"]
+        var root := Node3D.new()
+        root.name = "RestoredAnchor_%s" % site_id
+        root.position = Vector3(center.x, terrain_height(center.x, center.z), center.z)
+        add_child(root)
+
+        var dark_stone := _material(Color(0.025, 0.045, 0.075), 0.62, 0.35)
+        var gold := _emissive_material(Color(1.0, 0.69, 0.3), 2.8)
+        var awakened := _emissive_material(accent.lightened(0.38), 4.2)
+
+        var plinth := MeshInstance3D.new()
+        var plinth_mesh := CylinderMesh.new()
+        plinth_mesh.top_radius = 2.1
+        plinth_mesh.bottom_radius = 3.0
+        plinth_mesh.height = 0.8
+        plinth.mesh = plinth_mesh
+        plinth.position.y = 0.4
+        plinth.material_override = dark_stone
+        root.add_child(plinth)
+
+        var base_ring := MeshInstance3D.new()
+        var ring_mesh := TorusMesh.new()
+        ring_mesh.inner_radius = 2.25
+        ring_mesh.outer_radius = 2.55
+        base_ring.mesh = ring_mesh
+        base_ring.position.y = 0.7
+        base_ring.rotation_degrees.x = 90.0
+        base_ring.material_override = gold
+        root.add_child(base_ring)
+
+        var energy_ring := MeshInstance3D.new()
+        var energy_mesh := TorusMesh.new()
+        energy_mesh.inner_radius = 4.0
+        energy_mesh.outer_radius = 4.16
+        energy_ring.mesh = energy_mesh
+        energy_ring.position.y = 0.28
+        energy_ring.rotation_degrees.x = 90.0
+        energy_ring.material_override = awakened
+        root.add_child(energy_ring)
+
+        _add_crystal(root, Vector3(0.0, 0.75, 0.0), 5.2, accent.lightened(0.5))
+        var beam := MeshInstance3D.new()
+        var beam_mesh := CylinderMesh.new()
+        beam_mesh.top_radius = 0.035
+        beam_mesh.bottom_radius = 0.14
+        beam_mesh.height = 8.5
+        beam.mesh = beam_mesh
+        beam.position.y = 7.1
+        beam.material_override = awakened
+        root.add_child(beam)
+
+        for side in [-1.0, 1.0]:
+            for depth in [-1.0, 1.0]:
+                var pylon := MeshInstance3D.new()
+                var pylon_mesh := BoxMesh.new()
+                pylon_mesh.size = Vector3(0.5, 2.1, 0.5)
+                pylon.mesh = pylon_mesh
+                pylon.position = Vector3(side * 4.6, 1.05, depth * 4.6)
+                pylon.material_override = gold
+                root.add_child(pylon)
+
+        var light := OmniLight3D.new()
+        light.name = "AnchorRestorationLight"
+        light.position.y = 3.2
+        light.light_color = accent.lightened(0.42)
+        light.light_energy = 3.4
+        light.omni_range = 32.0
+        root.add_child(light)
+
+        _restored_anchor_ids[site_id] = true
+        return true
+
+    return false
+
+func get_restored_anchor_count() -> int:
+    return _restored_anchor_ids.size()
 
 func _create_broadleaf_species(center: Vector3, radius: float, rng: RandomNumberGenerator) -> void:
     var crown_mesh := SphereMesh.new()
