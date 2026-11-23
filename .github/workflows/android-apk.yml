@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'app/**'
+      - 'tests/**'
+      - 'scripts/**'
       - 'settings.gradle'
       - 'build.gradle'
       - 'gradle.properties'
@@ -53,6 +55,9 @@ jobs:
 
       - name: Run Android shell tests
         run: node tests/android-shell.test.cjs
+
+      - name: Run AAA visual upgrade tests
+        run: node tests/visual-upgrade.test.cjs
 
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
