@@ -9,6 +9,7 @@ signal quality_changed(quality: String)
 signal pause_requested
 signal resume_requested
 signal new_game_requested
+signal retry_requested
 
 const WorldRules = preload("res://scripts/world_rules.gd")
 const VirtualJoystickScript = preload("res://scripts/virtual_joystick.gd")
@@ -33,6 +34,7 @@ var _menu_root: Control
 var _hud_root: Control
 var _pause_panel: PanelContainer
 var _settings_panel: PanelContainer
+var _game_over_panel: PanelContainer
 var _class_title: Label
 var _class_weapon: Label
 var _class_ability: Label
@@ -60,18 +62,43 @@ func show_menu() -> void:
     _hud_root.visible = false
     _pause_panel.visible = false
     _settings_panel.visible = false
+    if _game_over_panel != null:
+        _game_over_panel.visible = false
 
 func show_hud() -> void:
     _menu_root.visible = false
     _hud_root.visible = true
     _pause_panel.visible = false
     _settings_panel.visible = false
+    if _game_over_panel != null:
+        _game_over_panel.visible = false
 
 func show_pause() -> void:
     _pause_panel.visible = true
 
 func hide_pause() -> void:
     _pause_panel.visible = false
+
+func set_selected_class(class_id: String) -> void:
+    _select_class(class_id)
+
+func show_game_over() -> void:
+    _hud_root.visible = false
+    if _game_over_panel != null:
+        _game_over_panel.queue_free()
+    _game_over_panel = _overlay_panel()
+    var column := VBoxContainer.new()
+    column.add_theme_constant_override("separation", 12)
+    column.add_child(_label("SIGNAL LOST", 28, Color(1.0, 0.36, 0.42)))
+    column.add_child(_label("سقطت في منطقة الخطر. يمكنك العودة إلى نقطة الملاذ.", 12, Color(0.78, 0.86, 0.96)))
+    var retry := _button("إعادة المحاولة  /  RETRY", Color(0.2, 0.72, 0.96), true)
+    retry.pressed.connect(func(): retry_requested.emit())
+    column.add_child(retry)
+    var menu := _button("العودة إلى القائمة", Color(0.76, 0.48, 0.3), false)
+    menu.pressed.connect(func(): new_game_requested.emit())
+    column.add_child(menu)
+    _game_over_panel.add_child(column)
+    add_child(_game_over_panel)
 
 func update_health(current: float, maximum: float) -> void:
     if _health_bar == null:
@@ -547,12 +574,19 @@ func _mini_info_panel(title: String, icon_text: String, accent: Color) -> Contro
 func _action_button(action_id: String, label_text: String, icon_key: String, dimension: float, primary: bool = false) -> Button:
     var button := Button.new()
     button.custom_minimum_size = Vector2(dimension, dimension)
-    button.text = _action_symbol(icon_key) + "\n" + label_text
-    button.add_theme_font_size_override("font_size", 13 if primary else 11)
+    button.text = label_text
+    button.add_theme_font_size_override("font_size", 13 if primary else 10)
     button.add_theme_color_override("font_color", Color(0.97, 0.99, 1.0))
     button.add_theme_stylebox_override("normal", _panel_style(Color(0.025, 0.065, 0.12, 0.89), Color(0.24, 0.68, 0.96, 0.82), 100 if primary else 16))
     button.add_theme_stylebox_override("hover", _panel_style(Color(0.09, 0.17, 0.27, 0.97), Color(0.62, 0.85, 1.0), 100 if primary else 16))
     button.add_theme_stylebox_override("pressed", _panel_style(Color(0.14, 0.23, 0.35, 1.0), Color(1.0, 0.7, 0.25), 100 if primary else 16))
+    var icon_path := str(ICON_PATHS.get(icon_key, ""))
+    if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
+        button.icon = load(icon_path)
+        button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        button.expand_icon = true
+    else:
+        button.text = _action_symbol(icon_key) + "\\n" + label_text
     button.tooltip_text = label_text
     button.pressed.connect(func(): action_requested.emit(action_id))
     return button
