@@ -7,6 +7,8 @@ const DEFAULTS: Dictionary = {
     "version": SAVE_VERSION,
     "selected_class": "vanguard",
     "shards": 0,
+    "damage_rank": 0,
+    "vitality_rank": 0,
     "quality": "balanced",
     "music_volume": 0.7,
     "effects_volume": 0.8,
@@ -25,6 +27,8 @@ static func normalise(raw_data: Variant) -> Dictionary:
         result["selected_class"] = selected_class
 
     result["shards"] = clampi(int(raw_data.get("shards", 0)), 0, 999999999)
+    result["damage_rank"] = clampi(int(raw_data.get("damage_rank", 0)), 0, 10)
+    result["vitality_rank"] = clampi(int(raw_data.get("vitality_rank", 0)), 0, 10)
 
     var quality := str(raw_data.get("quality", "balanced")).to_lower()
     if ["performance", "balanced", "high"].has(quality):
