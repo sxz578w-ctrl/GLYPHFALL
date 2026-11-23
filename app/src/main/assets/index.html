@@ -912,10 +912,12 @@ safeZoneMesh.rotation.x = -Math.PI / 2; safeZoneMesh.position.y = 0.1; scene.add
 
 // بناء المدينة (توسيع نطاق البناء)
 const buildingColliders = [], wallGeos = [], windowGeos = [], roofGeos = [];
+const staticBuildingSpecs = [];
 const destructibleBuildings = [], activeShards = [];
 
 function createStaticBuilding(x, z, w, h, d) {
   const baseY = getTerrainHeight(x, z);
+  staticBuildingSpecs.push({ x, z, w, h, d, baseY });
   let wallGeo = new THREE.BoxGeometry(w, h, d); wallGeo.translate(x, baseY + h / 2, z); wallGeos.push(wallGeo);
   let roofGeo = new THREE.BoxGeometry(w + 1, 0.5, d + 1); roofGeo.translate(x, baseY + h, z); roofGeos.push(roofGeo);
   const numWin = Math.floor(w / 2.5);
@@ -930,9 +932,9 @@ function createStaticBuilding(x, z, w, h, d) {
 function createDestructibleBuilding(x, z, w, h, d) {
   const baseY = getTerrainHeight(x, z);
   const geo = new THREE.BoxGeometry(w, h, d);
-  const mat = new THREE.MeshBasicMaterial({ color: 0x496a83 });
+  const mat = new THREE.MeshStandardMaterial({ color: 0x36546b, metalness: 0.42, roughness: 0.62, emissive: 0x0c283a, emissiveIntensity: 0.24 });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, baseY + h / 2, z); scene.add(mesh);
+  mesh.position.set(x, baseY + h / 2, z); mesh.castShadow = true; mesh.receiveShadow = true; scene.add(mesh);
   const line = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x00ffff }));
   mesh.add(line);
   destructibleBuildings.push({ mesh, x, z, w, h, d, baseY, hp: 100, maxHp: 100, isDestroyed: false });
@@ -959,9 +961,223 @@ createStaticBuilding(19, 2, 8, 10, 8);
 createStaticBuilding(-18, -2, 9, 8, 8);
 createStaticBuilding(4, -24, 10, 12, 8);
 createStaticBuilding(-23, -21, 8, 7, 8);
-scene.add(new THREE.Mesh(mergeGeometries(wallGeos), new THREE.MeshBasicMaterial({ color: 0x526b7e })));
-scene.add(new THREE.Mesh(mergeGeometries(roofGeos), new THREE.MeshBasicMaterial({ color: 0x293f55 })));
-scene.add(new THREE.Mesh(mergeGeometries(windowGeos), new THREE.MeshBasicMaterial({ color: 0xffcf80 })));
+const cityWalls = new THREE.Mesh(mergeGeometries(wallGeos), new THREE.MeshStandardMaterial({ color: 0x526b7e, metalness: 0.24, roughness: 0.78 }));
+const cityRoofs = new THREE.Mesh(mergeGeometries(roofGeos), new THREE.MeshStandardMaterial({ color: 0x293f55, metalness: 0.38, roughness: 0.5 }));
+const cityWindows = new THREE.Mesh(mergeGeometries(windowGeos), new THREE.MeshStandardMaterial({ color: 0xffcf80, emissive: 0xffad61, emissiveIntensity: 1.35, roughness: 0.24, side: THREE.DoubleSide }));
+cityWalls.castShadow = true; cityWalls.receiveShadow = true;
+cityRoofs.castShadow = true; cityRoofs.receiveShadow = true;
+cityWindows.receiveShadow = true;
+scene.add(cityWalls, cityRoofs, cityWindows);
+
+
+function buildTerrainSurface() {
+  const segments = 136, side = segments + 1, vertices = side * side;
+  const positions = new Float32Array(vertices * 3), colors = new Float32Array(vertices * 3), indices = [];
+  const centerColor = new THREE.Color(0x1c3444), fieldColor = new THREE.Color(0x253b35);
+  const wasteColor = new THREE.Color(0x382b39), abyssColor = new THREE.Color(0x261b2b);
+  for (let ix = 0; ix <= segments; ix++) {
+    for (let iz = 0; iz <= segments; iz++) {
+      const x = -MAP_SIZE + (ix / segments) * MAP_SIZE * 2;
+      const z = -MAP_SIZE + (iz / segments) * MAP_SIZE * 2;
+      const idx = (ix * side + iz) * 3, dist = Math.hypot(x, z);
+      positions[idx] = x; positions[idx + 1] = getTerrainHeight(x, z) - 0.32; positions[idx + 2] = z;
+      const base = dist < 44 ? centerColor : dist < 125 ? fieldColor : dist < 175 ? wasteColor : abyssColor;
+      const tint = 0.86 + ((ix * 13 + iz * 7) % 19) / 100;
+      colors[idx] = base.r * tint; colors[idx + 1] = base.g * tint; colors[idx + 2] = base.b * tint;
+      if (ix < segments && iz < segments) {
+        const a = ix * side + iz, b = (ix + 1) * side + iz, c = (ix + 1) * side + iz + 1, d = ix * side + iz + 1;
+        indices.push(a, b, d, b, c, d);
+      }
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.setIndex(indices); geo.computeVertexNormals();
+  const terrain = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.96, metalness: 0.03 }));
+  terrain.receiveShadow = true; terrain.name = 'AetherTerrain'; scene.add(terrain);
+
+  const plaza = new THREE.Mesh(new THREE.CircleGeometry(20, 72), new THREE.MeshStandardMaterial({ color: 0x30495a, roughness: 0.72, metalness: 0.2, transparent: true, opacity: 0.88 }));
+  plaza.rotation.x = -Math.PI / 2; plaza.position.y = getTerrainHeight(0, 0) + 0.02; plaza.receiveShadow = true; scene.add(plaza);
+  const plazaRing = new THREE.Mesh(new THREE.RingGeometry(19.5, 20.4, 88), new THREE.MeshBasicMaterial({ color: 0x48d9ed, transparent: true, opacity: 0.56, side: THREE.DoubleSide }));
+  plazaRing.rotation.x = -Math.PI / 2; plazaRing.position.y = getTerrainHeight(0, 0) + 0.06; scene.add(plazaRing);
+
+  const roadMaterial = new THREE.MeshStandardMaterial({ color: 0x14283a, metalness: 0.28, roughness: 0.72 });
+  const roadEdgeMaterial = new THREE.MeshBasicMaterial({ color: 0x269cb5, transparent: true, opacity: 0.7 });
+  const routes = [
+    [[0, 0], [4, -22], [18, -44], [42, -66], [78, -91], [120, -112]],
+    [[0, 0], [24, 8], [49, 24], [74, 45], [102, 75], [132, 104]],
+    [[0, 0], [-22, 18], [-42, 42], [-60, 72], [-86, 105], [-118, 136]]
+  ];
+  for (const route of routes) {
+    const points = route.map(p => new THREE.Vector3(p[0], getTerrainHeight(p[0], p[1]) + 0.12, p[1]));
+    const curve = new THREE.CatmullRomCurve3(points);
+    const road = new THREE.Mesh(new THREE.TubeGeometry(curve, 96, 2.25, 8, false), roadMaterial);
+    road.receiveShadow = true; scene.add(road);
+    const left = route.map(p => new THREE.Vector3(p[0] + 2.2, getTerrainHeight(p[0] + 2.2, p[1]) + 0.28, p[1]));
+    const right = route.map(p => new THREE.Vector3(p[0] - 2.2, getTerrainHeight(p[0] - 2.2, p[1]) + 0.28, p[1]));
+    scene.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(left), 96, 0.045, 5, false), roadEdgeMaterial));
+    scene.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(right), 96, 0.045, 5, false), roadEdgeMaterial));
+  }
+}
+
+function buildAAAArchitecture() {
+  const unit = new THREE.BoxGeometry(1, 1, 1);
+  const detail = { stone: [], glass: [], warm: [], metal: [], pillars: [], beacon: [] };
+  function put(kind, x, y, z, sx, sy, sz, ry) { detail[kind].push({ x, y, z, sx, sy, sz, ry: ry || 0 }); }
+  for (const b of staticBuildingSpecs) {
+    const floors = Math.max(1, Math.floor((b.h - 1.2) / 3.15));
+    const halfW = b.w / 2, halfD = b.d / 2;
+    put('stone', b.x, b.baseY + 0.28, b.z, b.w + 0.65, 0.52, b.d + 0.65, 0);
+    put('stone', b.x, b.baseY + b.h + 0.48, b.z, b.w + 1.1, 0.5, b.d + 1.1, 0);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      put('pillars', b.x + sx * (halfW - 0.28), b.baseY + b.h * 0.5, b.z + sz * (halfD - 0.28), 0.5, b.h, 0.5, 0);
+    }
+    for (let floor = 0; floor < floors; floor++) {
+      const y = b.baseY + 1.6 + floor * 3.05;
+      const winW = Math.min(1.55, Math.max(0.95, (b.w - 2) / 4.2));
+      const winH = 1.8, frontCount = Math.max(2, Math.floor((b.w - 1.8) / 2.5));
+      for (let n = 0; n < frontCount; n++) {
+        const x = b.x - (frontCount - 1) * 1.15 + n * 2.3;
+        const warm = (Math.round(b.x * 3 + b.z * 7 + floor * 5 + n) % 4) === 0;
+        put(warm ? 'warm' : 'glass', x, y, b.z + halfD + 0.085, winW, winH, 0.12, 0);
+        put('metal', x - winW * 0.55, y, b.z + halfD + 0.15, 0.09, winH + 0.14, 0.1, 0);
+        put('metal', x + winW * 0.55, y, b.z + halfD + 0.15, 0.09, winH + 0.14, 0.1, 0);
+        put('metal', x, y - winH * 0.55, b.z + halfD + 0.15, winW + 0.16, 0.09, 0.1, 0);
+        put('metal', x, y + winH * 0.55, b.z + halfD + 0.15, winW + 0.16, 0.09, 0.1, 0);
+        put('glass', x, y, b.z - halfD - 0.085, winW, winH, 0.12, 0);
+      }
+      const sideCount = Math.max(1, Math.floor((b.d - 1.8) / 2.7));
+      for (let n = 0; n < sideCount; n++) {
+        const z = b.z - (sideCount - 1) * 1.2 + n * 2.4;
+        put('glass', b.x + halfW + 0.085, y, z, winH, winH, 0.12, Math.PI / 2);
+        put('glass', b.x - halfW - 0.085, y, z, winH, winH, 0.12, Math.PI / 2);
+      }
+      put('stone', b.x, b.baseY + 1.0 + floor * 3.05, b.z + halfD + 0.09, b.w + 0.22, 0.12, 0.2, 0);
+    }
+    put('beacon', b.x, b.baseY + b.h + 1.8, b.z, 0.24, 3.2, 0.24, 0);
+    if (b.h > 9) {
+      put('metal', b.x, b.baseY + b.h + 3.5, b.z, 1.8, 0.08, 0.08, 0);
+      put('metal', b.x, b.baseY + b.h + 4.25, b.z, 1.1, 0.08, 0.08, 0);
+    }
+  }
+  function install(kind, material, geo) {
+    const list = detail[kind]; if (!list.length) return;
+    const mesh = new THREE.InstancedMesh(geo || unit, material, list.length), dummy = new THREE.Object3D();
+    list.forEach((v, i) => {
+      dummy.position.set(v.x, v.y, v.z); dummy.rotation.set(0, v.ry || 0, 0);
+      dummy.scale.set(v.sx, v.sy, v.sz); dummy.updateMatrix(); mesh.setMatrixAt(i, dummy.matrix);
+      if (kind === 'glass' || kind === 'warm') {
+        const tint = 0.86 + ((i * 17) % 13) / 100;
+        mesh.setColorAt(i, new THREE.Color(tint, tint, tint));
+      }
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    mesh.castShadow = true; mesh.receiveShadow = true; scene.add(mesh);
+  }
+  install('stone', new THREE.MeshStandardMaterial({ color: 0x263f54, metalness: 0.48, roughness: 0.48, emissive: 0x071927, emissiveIntensity: 0.3 }));
+  install('glass', new THREE.MeshStandardMaterial({ color: 0x4bb9dc, metalness: 0.42, roughness: 0.2, emissive: 0x1c83ba, emissiveIntensity: 1.2 }));
+  install('warm', new THREE.MeshStandardMaterial({ color: 0xffc781, metalness: 0.12, roughness: 0.23, emissive: 0xffa34e, emissiveIntensity: 1.45 }));
+  install('metal', new THREE.MeshStandardMaterial({ color: 0x9db5c4, metalness: 0.82, roughness: 0.28, emissive: 0x0b3146, emissiveIntensity: 0.3 }));
+  install('pillars', new THREE.MeshStandardMaterial({ color: 0x38566b, metalness: 0.36, roughness: 0.55 }));
+  install('beacon', new THREE.MeshStandardMaterial({ color: 0x63dfff, metalness: 0.5, roughness: 0.25, emissive: 0x2ecaff, emissiveIntensity: 1.6 }), new THREE.CylinderGeometry(0.07, 0.2, 1, 6));
+}
+
+function buildForestBiomes() {
+  function rng(seed) { let value = seed >>> 0; return () => { value = (value * 1664525 + 1013904223) >>> 0; return value / 4294967296; }; }
+  const random = rng(0xA37E2), trees = [], sites = RESERVED_FOREST_CLEARINGS;
+  for (let attempt = 0; attempt < 3200 && trees.length < 520; attempt++) {
+    let x, z;
+    if (random() < 0.52) {
+      const site = sites[Math.floor(random() * sites.length)], angle = random() * Math.PI * 2, radius = 25 + random() * 34;
+      x = site.x + Math.cos(angle) * radius; z = site.z + Math.sin(angle) * radius;
+    } else {
+      const angle = random() * Math.PI * 2, radius = 52 + random() * 176;
+      x = Math.cos(angle) * radius; z = Math.sin(angle) * radius;
+    }
+    if (Math.hypot(x, z) < SAFE_ZONE_RADIUS + 20) continue;
+    if (sites.some(site => Math.hypot(x - site.x, z - site.z) < 21)) continue;
+    if (buildingColliders.some(b => x > b.minX - 4 && x < b.maxX + 4 && z > b.minZ - 4 && z < b.maxZ + 4)) continue;
+    trees.push({ x, z, y: getTerrainHeight(x, z), h: 7 + random() * 10, r: 3.1 + random() * 2.5, variant: random() });
+  }
+  if (trees.length < 20) throw new Error('Forest scatter failed to generate enough trees.');
+  const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.25, 0.5, 1, 7), new THREE.MeshStandardMaterial({ color: 0x4d3c32, roughness: 0.92 }), trees.length);
+  const crowns = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.92 }), trees.length);
+  const crownsTop = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.88 }), trees.length);
+  const dummy = new THREE.Object3D();
+  trees.forEach((tree, i) => {
+    dummy.position.set(tree.x, tree.y + tree.h * 0.5, tree.z); dummy.rotation.set(0, tree.variant * Math.PI * 2, 0);
+    dummy.scale.set(0.76, tree.h, 0.76); dummy.updateMatrix(); trunks.setMatrixAt(i, dummy.matrix);
+    dummy.position.set(tree.x, tree.y + tree.h * 0.82, tree.z); dummy.scale.set(tree.r, tree.r * 0.88, tree.r);
+    dummy.updateMatrix(); crowns.setMatrixAt(i, dummy.matrix);
+    dummy.position.set(tree.x + (tree.variant - 0.5) * tree.r, tree.y + tree.h * 1.02, tree.z + (0.5 - tree.variant) * tree.r);
+    dummy.scale.set(tree.r * 0.66, tree.r * 0.72, tree.r * 0.66); dummy.updateMatrix(); crownsTop.setMatrixAt(i, dummy.matrix);
+    const shade = 0.82 + tree.variant * 0.35;
+    crowns.setColorAt(i, new THREE.Color(0.17 * shade, 0.42 * shade, 0.31 * shade));
+    crownsTop.setColorAt(i, new THREE.Color(0.23 * shade, 0.58 * shade, 0.43 * shade));
+  });
+  for (const mesh of [trunks, crowns, crownsTop]) {
+    mesh.instanceMatrix.needsUpdate = true; if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    mesh.castShadow = true; mesh.receiveShadow = true; scene.add(mesh);
+  }
+  const rocks = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: 0x3b5360, roughness: 0.98, metalness: 0.08 }), 180);
+  for (let i = 0; i < 180; i++) {
+    const tree = trees[(i * 13) % trees.length], angle = i * 2.39996, radius = 2 + (i % 5) * 0.7;
+    dummy.position.set(tree.x + Math.cos(angle) * radius, tree.y + 0.3, tree.z + Math.sin(angle) * radius);
+    dummy.rotation.set(i * 0.31, i * 0.73, i * 0.13);
+    const scale = 0.4 + (i % 7) * 0.15; dummy.scale.set(scale * 1.7, scale, scale); dummy.updateMatrix(); rocks.setMatrixAt(i, dummy.matrix);
+  }
+  rocks.castShadow = true; rocks.receiveShadow = true; scene.add(rocks);
+  const crystals = new THREE.InstancedMesh(new THREE.OctahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: 0x5feaff, emissive: 0x28dfff, emissiveIntensity: 1.8, metalness: 0.4, roughness: 0.2 }), 72);
+  for (let i = 0; i < 72; i++) {
+    const site = sites[i % sites.length], angle = i * 2.39996, radius = 26 + (i % 12) * 2.1;
+    const x = site.x + Math.cos(angle) * radius, z = site.z + Math.sin(angle) * radius, y = getTerrainHeight(x, z);
+    dummy.position.set(x, y + 0.8 + (i % 4) * 0.35, z); dummy.rotation.set(0.2 * i, i * 0.4, 0);
+    dummy.scale.set(0.5 + (i % 3) * 0.22, 1.0 + (i % 4) * 0.45, 0.5 + (i % 3) * 0.22);
+    dummy.updateMatrix(); crystals.setMatrixAt(i, dummy.matrix);
+  }
+  crystals.castShadow = true; scene.add(crystals);
+  for (const site of sites) {
+    const glow = new THREE.PointLight(0x45dff6, 2.4, 52, 2);
+    glow.position.set(site.x, getTerrainHeight(site.x, site.z) + 9, site.z);
+    scene.add(glow); environmentPulseLights.push({ light: glow, base: 2.4, phase: site.x * 0.01 });
+  }
+  const dustPositions = new Float32Array(900 * 3), dustColors = new Float32Array(900 * 3);
+  for (let i = 0; i < 900; i++) {
+    const angle = random() * Math.PI * 2, radius = 20 + random() * 235;
+    dustPositions[i * 3] = Math.cos(angle) * radius; dustPositions[i * 3 + 1] = 2 + random() * 25; dustPositions[i * 3 + 2] = Math.sin(angle) * radius;
+    dustColors[i * 3] = 0.35 + random() * 0.35; dustColors[i * 3 + 1] = 0.65 + random() * 0.3; dustColors[i * 3 + 2] = 0.8 + random() * 0.2;
+  }
+  const dustGeo = new THREE.BufferGeometry();
+  dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3)); dustGeo.setAttribute('color', new THREE.BufferAttribute(dustColors, 3));
+  const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ size: 0.7, vertexColors: true, transparent: true, opacity: 0.44, sizeAttenuation: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  dust.name = 'AetherMotes'; scene.add(dust); environmentPulseLights.push({ group: dust, phase: 0.4, rotate: true });
+}
+buildTerrainSurface();
+buildAAAArchitecture();
+buildForestBiomes();
+
+const portalGroup = new THREE.Group();
+portalGroup.position.set(8, getTerrainHeight(8, -168) + 56, -168);
+const portalMaterial = new THREE.MeshStandardMaterial({ color: 0x51e7ff, emissive: 0x20bfe9, emissiveIntensity: 2.4, metalness: 0.72, roughness: 0.18 });
+portalGroup.add(new THREE.Mesh(new THREE.TorusGeometry(23, 1.5, 16, 96), portalMaterial));
+portalGroup.add(new THREE.Mesh(new THREE.TorusGeometry(18.5, 0.42, 12, 96), new THREE.MeshBasicMaterial({ color: 0xb7faff })));
+for (let i = 0; i < 8; i++) {
+  const shard = new THREE.Mesh(new THREE.OctahedronGeometry(1.2 + (i % 3) * 0.4, 0), new THREE.MeshStandardMaterial({ color: 0x3bd7ee, emissive: 0x189ec6, emissiveIntensity: 1.3, metalness: 0.6, roughness: 0.22 }));
+  const angle = i / 8 * Math.PI * 2; shard.position.set(Math.cos(angle) * 29, Math.sin(angle) * 29, (i % 2) * 4 - 2);
+  shard.rotation.set(angle, angle * 0.4, angle); portalGroup.add(shard);
+}
+scene.add(portalGroup);
+const portalLight = new THREE.PointLight(0x48dfff, 8, 95, 2); portalLight.position.copy(portalGroup.position); scene.add(portalLight);
+environmentPulseLights.push({ light: portalLight, base: 8, phase: 0.7 });
+function updateAAAEnvironment(dt) {
+  portalGroup.rotation.z += dt * 0.04;
+  for (const item of environmentPulseLights) {
+    if (item.light) item.light.intensity = item.base * (0.86 + Math.sin(animTime * 1.1 + item.phase) * 0.14);
+    if (item.group && item.rotate) item.group.rotation.y += dt * 0.003;
+  }
+}
 
 // أبراج إرشاد مضيئة ترفع وضوح المدينة وتحدد أطراف المنطقة الآمنة.
 for (const [lx, lz] of [[-34, -34], [34, -34], [-34, 34], [34, 34]]) {
@@ -1858,6 +2074,7 @@ function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.1);
   animTime += dt;
+  updateAAAEnvironment(dt);
 
   if (isPaused || isShopOpen || gameState === "won" || isDead) { composer.render(); return; }
 
