@@ -10,6 +10,8 @@ signal pause_requested
 signal resume_requested
 signal new_game_requested
 signal retry_requested
+signal purchase_requested(item_id: String)
+signal merchant_closed
 
 const WorldRules = preload("res://scripts/world_rules.gd")
 const VirtualJoystickScript = preload("res://scripts/virtual_joystick.gd")
@@ -40,6 +42,9 @@ var _hud_root: Control
 var _pause_panel: PanelContainer
 var _settings_panel: PanelContainer
 var _game_over_panel: PanelContainer
+var _keeper_panel: PanelContainer
+var _keeper_shards_label: Label
+var _hud_toast: Label
 var _class_title: Label
 var _class_art: TextureRect
 var _class_weapon: Label
@@ -73,6 +78,8 @@ func show_menu() -> void:
     _settings_panel.visible = false
     if _game_over_panel != null:
         _game_over_panel.visible = false
+    if _keeper_panel != null:
+        _keeper_panel.visible = false
 
 func show_hud() -> void:
     _menu_root.visible = false
@@ -81,6 +88,8 @@ func show_hud() -> void:
     _settings_panel.visible = false
     if _game_over_panel != null:
         _game_over_panel.visible = false
+    if _keeper_panel != null:
+        _keeper_panel.visible = false
 
 func show_pause() -> void:
     _pause_panel.visible = true
@@ -132,6 +141,30 @@ func update_hud(shards: int, zone_name: String, objective: String) -> void:
 func set_status(message: String) -> void:
     if _status_label != null:
         _status_label.text = message
+
+func notify_event(message: String) -> void:
+    if _hud_toast == null:
+        return
+    _hud_toast.text = message
+    _hud_toast.modulate.a = 1.0
+    var toast_tween := create_tween()
+    toast_tween.tween_interval(2.0)
+    toast_tween.tween_property(_hud_toast, "modulate:a", 0.0, 0.45)
+
+func show_keeper(shards: int) -> void:
+    if _keeper_panel == null:
+        _build_keeper_panel()
+    update_keeper_shards(shards)
+    _keeper_panel.visible = true
+
+func update_keeper_shards(shards: int) -> void:
+    if _keeper_shards_label != null:
+        _keeper_shards_label.text = "AVAILABLE SHARDS  •  %06d" % shards
+
+func close_keeper() -> void:
+    if _keeper_panel != null:
+        _keeper_panel.visible = false
+    merchant_closed.emit()
 
 func _build_main_menu() -> void:
     _menu_root = Control.new()
@@ -484,6 +517,45 @@ func _build_hud() -> void:
     pause_button.offset_bottom = 74
     pause_button.pressed.connect(func(): pause_requested.emit())
     _hud_root.add_child(pause_button)
+
+    _hud_toast = _label("", 15, Color(0.95, 0.97, 1.0))
+    _hud_toast.anchor_left = 0.5
+    _hud_toast.anchor_right = 0.5
+    _hud_toast.anchor_top = 0.72
+    _hud_toast.anchor_bottom = 0.72
+    _hud_toast.offset_left = -260
+    _hud_toast.offset_right = 260
+    _hud_toast.offset_top = -18
+    _hud_toast.offset_bottom = 26
+    _hud_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    _hud_toast.modulate.a = 0.0
+    _hud_root.add_child(_hud_toast)
+
+func _build_keeper_panel() -> void:
+    _keeper_panel = _overlay_panel()
+    var column := VBoxContainer.new()
+    column.add_theme_constant_override("separation", 10)
+    column.add_child(_label("THE KEEPER'S TRADING POST", 18, Color(0.83, 0.94, 1.0)))
+    column.add_child(_label("مركز التجارة والتطوير", 13, Color(0.58, 0.83, 1.0)))
+    _keeper_shards_label = _label("AVAILABLE SHARDS  •  000000", 11, Color(1.0, 0.82, 0.53))
+    column.add_child(_keeper_shards_label)
+    column.add_child(_separator())
+    _add_keeper_item(column, "health", "جرعة ترميم الصحة", "HEALTH RESTORE  +65", 10)
+    _add_keeper_item(column, "energy", "نواة استعادة الطاقة", "ENERGY RESTORE  +65", 8)
+    _add_keeper_item(column, "damage", "نقش سلاح دائم", "WEAPON MASTERY  +5.5%", 45)
+    _add_keeper_item(column, "vitality", "تقوية الدرع الحيوي", "VITALITY  +12 MAX HP", 40)
+    var close := _button("إغلاق  /  CLOSE", Color(0.75, 0.5, 0.34), false)
+    close.pressed.connect(func(): close_keeper())
+    column.add_child(close)
+    _keeper_panel.add_child(column)
+    add_child(_keeper_panel)
+
+func _add_keeper_item(parent: VBoxContainer, item_id: String, title: String, detail: String, cost: int) -> void:
+    var button := _button(title + "  •  " + str(cost) + " SHARDS", Color(0.18, 0.63, 0.88), false)
+    button.tooltip_text = detail
+    button.pressed.connect(func(): purchase_requested.emit(item_id))
+    parent.add_child(button)
+    parent.add_child(_label(detail, 8, Color(0.63, 0.77, 0.9)))
 
 func _build_pause_panel() -> void:
     _pause_panel = _overlay_panel()
