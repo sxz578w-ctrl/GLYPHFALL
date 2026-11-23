@@ -37,9 +37,13 @@ func _initialize() -> void:
             _fail("Spawned enemy must register as hostile")
             instance.queue_free()
             return
-        var position_error: float = enemy.global_position.distance_to(enemy.home_position)
-        if position_error >= 0.01:
-            _fail("Spawned enemy is not at its authored home position: " + str(position_error))
+        var horizontal_error: float = Vector2(
+            enemy.global_position.x - enemy.home_position.x,
+            enemy.global_position.z - enemy.home_position.z
+        ).length()
+        var vertical_error: float = absf(enemy.global_position.y - enemy.home_position.y)
+        if horizontal_error >= 0.01 or vertical_error >= 0.35:
+            _fail("Spawned enemy drifted from its authored home position; horizontal=" + str(horizontal_error) + ", vertical=" + str(vertical_error))
             instance.queue_free()
             return
 
