@@ -318,6 +318,14 @@ func _rebuild_visual_model(profile: Dictionary) -> void:
     _add_part(_body_root, BoxMesh.new(), Vector3(0.55, 1.48, 0.0), Vector3(0.32, 0.28, 0.5), metal)
     _add_part(_body_root, CapsuleMesh.new(), Vector3(-0.22, 0.42, 0.0), Vector3(0.26, 0.66, 0.28), armor)
     _add_part(_body_root, CapsuleMesh.new(), Vector3(0.22, 0.42, 0.0), Vector3(0.26, 0.66, 0.28), armor)
+    _add_part(_body_root, BoxMesh.new(), Vector3(-0.22, 0.08, -0.06), Vector3(0.42, 0.2, 0.58), metal)
+    _add_part(_body_root, BoxMesh.new(), Vector3(0.22, 0.08, -0.06), Vector3(0.42, 0.2, 0.58), metal)
+    _add_part(_body_root, CapsuleMesh.new(), Vector3(-0.57, 1.1, 0.0), Vector3(0.2, 0.53, 0.22), armor)
+    _add_part(_body_root, CapsuleMesh.new(), Vector3(0.57, 1.1, 0.0), Vector3(0.2, 0.53, 0.22), armor)
+    _add_part(_body_root, BoxMesh.new(), Vector3(-0.58, 0.78, -0.03), Vector3(0.28, 0.2, 0.32), metal)
+    _add_part(_body_root, BoxMesh.new(), Vector3(0.58, 0.78, -0.03), Vector3(0.28, 0.2, 0.32), metal)
+    _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 0.86, 0.29), Vector3(0.92, 0.84, 0.14), cloth)
+    _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 0.48, 0.34), Vector3(0.72, 0.16, 0.16), glow)
 
     _weapon_root = Node3D.new()
     _weapon_root.name = "SignatureWeapon"
@@ -327,13 +335,18 @@ func _rebuild_visual_model(profile: Dictionary) -> void:
         "vanguard":
             _add_weapon_sword(_weapon_root, glow, metal, 1.25)
             _add_part(_body_root, BoxMesh.new(), Vector3(-0.67, 1.05, -0.12), Vector3(0.55, 0.72, 0.18), glow)
+            _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 2.23, -0.02), Vector3(0.62, 0.12, 0.48), metal)
         "phantom":
+            _add_part(_body_root, SphereMesh.new(), Vector3(0.0, 2.04, 0.1), Vector3(0.48, 0.5, 0.46), cloth)
+            _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 1.99, -0.31), Vector3(0.36, 0.09, 0.08), glow)
             _add_weapon_sword(_weapon_root, glow, metal, 0.92)
             var second := Node3D.new()
             second.position = Vector3(-1.1, 0.0, 0.0)
             _weapon_root.add_child(second)
             _add_weapon_sword(second, glow, metal, 0.92)
         "bastion":
+            _add_part(_body_root, BoxMesh.new(), Vector3(-0.61, 1.52, 0.0), Vector3(0.48, 0.39, 0.62), metal)
+            _add_part(_body_root, BoxMesh.new(), Vector3(0.61, 1.52, 0.0), Vector3(0.48, 0.39, 0.62), metal)
             _add_part(_weapon_root, CylinderMesh.new(), Vector3(0.0, 0.6, 0.0), Vector3(0.11, 0.85, 0.11), metal)
             _add_part(_weapon_root, BoxMesh.new(), Vector3(0.0, 1.28, 0.0), Vector3(0.72, 0.62, 0.68), glow)
 
