@@ -1,6 +1,8 @@
 extends Node
 class_name EncounterManager
 
+signal shards_awarded(amount: int)
+
 const EnemySceneScript = preload("res://scripts/enemy_controller.gd")
 
 var player: PlayerController
@@ -44,6 +46,10 @@ func _spawn_site_enemies() -> void:
             var enemy := EnemySceneScript.new()
             enemy.name = "%s_Sentinel_%02d" % [id, i + 1]
             enemy.configure(player, center, radius, position, site["accent"])
+            enemy.defeated.connect(_on_enemy_defeated)
             add_child(enemy)
             enemies.append(enemy)
         site_enemies[id] = enemies
+
+func _on_enemy_defeated(amount: int) -> void:
+    shards_awarded.emit(maxi(1, amount))
