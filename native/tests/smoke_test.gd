@@ -9,7 +9,9 @@ func _initialize() -> void:
     await process_frame
     assert(instance.has_node("WorldBuilder"), "WorldBuilder must be composed")
     assert(instance.has_node("Player"), "Player must be composed")
+    assert(instance.has_node("EncounterManager"), "EncounterManager must be composed")
     assert(instance.has_node("GameUI"), "GameUI must be composed")
     print("GLYPHFALL native scene smoke test: PASS")
+    get_tree().paused = false
     instance.queue_free()
     quit()
