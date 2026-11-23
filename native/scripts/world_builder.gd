@@ -155,6 +155,13 @@ func _build_terrain() -> void:
     terrain_instance.gi_mode = GeometryInstance3D.GI_MODE_STATIC
     add_child(terrain_instance)
 
+    var terrain_body := StaticBody3D.new()
+    terrain_body.name = "TerrainCollision"
+    var terrain_collision := CollisionShape3D.new()
+    terrain_collision.shape = terrain_mesh.create_trimesh_shape()
+    terrain_body.add_child(terrain_collision)
+    add_child(terrain_body)
+
 func _terrain_color(x: float, z: float, height: float) -> Color:
     var distance := Vector2(x, z).length()
     var noise_color := _noise.get_noise_2d(x * 2.3, z * 2.3)
@@ -257,6 +264,15 @@ func _create_building(origin: Vector3, size: Vector3, wall: Material, roof: Mate
     add_child(root)
     _add_box(root, "Foundation", Vector3(size.x + 1.6, 0.8, size.z + 1.6), Vector3(0.0, 0.4, 0.0), roof)
     _add_box(root, "Facade", Vector3(size.x, size.y, size.z), Vector3(0.0, size.y * 0.5 + 0.8, 0.0), wall)
+    var building_body := StaticBody3D.new()
+    building_body.name = "BuildingCollision"
+    var building_shape := CollisionShape3D.new()
+    var building_box := BoxShape3D.new()
+    building_box.size = size
+    building_shape.shape = building_box
+    building_shape.position.y = size.y * 0.5 + 0.8
+    building_body.add_child(building_shape)
+    root.add_child(building_body)
     _add_box(root, "Roof", Vector3(size.x + 1.2, 0.6, size.z + 1.2), Vector3(0.0, size.y + 1.0, 0.0), roof)
     _add_box(root, "RoofTrim", Vector3(size.x + 1.5, 0.18, size.z + 1.5), Vector3(0.0, size.y + 1.33, 0.0), trim)
 
@@ -510,6 +526,7 @@ func _material(color: Color, metallic: float, roughness: float) -> StandardMater
         return _materials[key]
     var material := StandardMaterial3D.new()
     material.albedo_color = color
+    material.vertex_color_use_as_albedo = true
     material.metallic = metallic
     material.roughness = roughness
     material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
