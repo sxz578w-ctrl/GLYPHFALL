@@ -297,6 +297,7 @@ func _create_camera() -> void:
     _camera.fov = 66.0
     _camera_arm.add_child(_camera)
 
+
 func _rebuild_visual_model(profile: Dictionary) -> void:
     if _body_root != null:
         _body_root.queue_free()
@@ -305,56 +306,94 @@ func _rebuild_visual_model(profile: Dictionary) -> void:
     add_child(_body_root)
 
     var accent: Color = profile["accent"]
-    var armor := _make_material(Color(0.045, 0.075, 0.12), 0.58, 0.35)
-    var metal := _make_material(Color(0.28, 0.35, 0.45), 0.82, 0.24)
-    var glow := _make_material(accent, 0.32, 0.2, true)
-    var cloth := _make_material(Color(0.025, 0.035, 0.065), 0.08, 0.86)
+    var armor := _make_material(Color(0.026, 0.046, 0.083), 0.72, 0.32)
+    var dark_armor := _make_material(Color(0.012, 0.022, 0.044), 0.62, 0.43)
+    var metal := _make_material(Color(0.35, 0.42, 0.52), 0.9, 0.2)
+    var trim := _make_material(Color(0.62, 0.42, 0.2), 0.82, 0.26)
+    var glow := _make_material(accent, 0.34, 0.18, true)
+    var cloth := _make_material(Color(0.018, 0.026, 0.052), 0.04, 0.92)
+    var inner_cloth := _make_material(Color(0.055, 0.075, 0.12), 0.14, 0.78)
 
-    _add_part(_body_root, CapsuleMesh.new(), Vector3(0.0, 1.14, 0.0), Vector3(0.72, 1.0, 0.48), armor)
-    _add_part(_body_root, SphereMesh.new(), Vector3(0.0, 1.98, 0.0), Vector3(0.42, 0.48, 0.4), metal)
-    _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 0.84, 0.15), Vector3(0.68, 0.72, 0.3), cloth)
-    _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 1.42, -0.28), Vector3(0.11, 0.82, 0.12), glow)
-    _add_part(_body_root, BoxMesh.new(), Vector3(-0.55, 1.48, 0.0), Vector3(0.32, 0.28, 0.5), metal)
-    _add_part(_body_root, BoxMesh.new(), Vector3(0.55, 1.48, 0.0), Vector3(0.32, 0.28, 0.5), metal)
-    _add_part(_body_root, CapsuleMesh.new(), Vector3(-0.22, 0.42, 0.0), Vector3(0.26, 0.66, 0.28), armor)
-    _add_part(_body_root, CapsuleMesh.new(), Vector3(0.22, 0.42, 0.0), Vector3(0.26, 0.66, 0.28), armor)
-    _add_part(_body_root, BoxMesh.new(), Vector3(-0.22, 0.08, -0.06), Vector3(0.42, 0.2, 0.58), metal)
-    _add_part(_body_root, BoxMesh.new(), Vector3(0.22, 0.08, -0.06), Vector3(0.42, 0.2, 0.58), metal)
-    _add_part(_body_root, CapsuleMesh.new(), Vector3(-0.57, 1.1, 0.0), Vector3(0.2, 0.53, 0.22), armor)
-    _add_part(_body_root, CapsuleMesh.new(), Vector3(0.57, 1.1, 0.0), Vector3(0.2, 0.53, 0.22), armor)
-    _add_part(_body_root, BoxMesh.new(), Vector3(-0.58, 0.78, -0.03), Vector3(0.28, 0.2, 0.32), metal)
-    _add_part(_body_root, BoxMesh.new(), Vector3(0.58, 0.78, -0.03), Vector3(0.28, 0.2, 0.32), metal)
-    _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 0.86, 0.29), Vector3(0.92, 0.84, 0.14), cloth)
-    _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 0.48, 0.34), Vector3(0.72, 0.16, 0.16), glow)
+    _add_part(_body_root, CapsuleMesh.new(), Vector3(0.0, 1.13, 0.0), Vector3(0.76, 1.02, 0.5), armor)
+    _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 1.18, -0.05), Vector3(0.78, 0.78, 0.56), dark_armor)
+    _add_part(_body_root, PrismMesh.new(), Vector3(0.0, 1.36, -0.31), Vector3(0.62, 0.82, 0.2), metal)
+    _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 1.42, -0.44), Vector3(0.12, 0.9, 0.08), glow)
+    _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 0.73, 0.18), Vector3(0.82, 0.18, 0.72), trim)
+    _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 0.61, 0.18), Vector3(0.7, 0.22, 0.6), dark_armor)
+
+    _add_part(_body_root, SphereMesh.new(), Vector3(0.0, 2.02, 0.0), Vector3(0.42, 0.48, 0.4), metal)
+    _add_part(_body_root, PrismMesh.new(), Vector3(0.0, 2.25, -0.08), Vector3(0.48, 0.32, 0.46), armor)
+    _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 2.04, -0.36), Vector3(0.43, 0.1, 0.1), glow)
+    _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 2.3, -0.04), Vector3(0.16, 0.38, 0.16), trim)
+
+    for side in [-1.0, 1.0]:
+        var shoulder := _add_part(_body_root, PrismMesh.new(), Vector3(side * 0.57, 1.53, 0.0), Vector3(0.62, 0.48, 0.62), metal)
+        shoulder.rotation_degrees.z = side * -12.0
+        _add_part(_body_root, BoxMesh.new(), Vector3(side * 0.57, 1.55, -0.34), Vector3(0.46, 0.1, 0.14), trim)
+        var upper_arm := _add_part(_body_root, CapsuleMesh.new(), Vector3(side * 0.64, 1.12, -0.02), Vector3(0.23, 0.56, 0.24), armor)
+        upper_arm.rotation_degrees.z = side * 13.0
+        _add_part(_body_root, BoxMesh.new(), Vector3(side * 0.67, 0.82, -0.08), Vector3(0.32, 0.28, 0.34), metal)
+        _add_part(_body_root, BoxMesh.new(), Vector3(side * 0.23, 0.43, 0.02), Vector3(0.29, 0.7, 0.33), dark_armor)
+        _add_part(_body_root, BoxMesh.new(), Vector3(side * 0.23, 0.14, -0.08), Vector3(0.42, 0.23, 0.58), metal)
+        _add_part(_body_root, BoxMesh.new(), Vector3(side * 0.23, 0.82, -0.21), Vector3(0.32, 0.2, 0.14), trim)
+
+    var cape := _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 1.02, 0.42), Vector3(0.94, 1.18, 0.12), cloth)
+    cape.rotation_degrees.x = -7.0
+    _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 0.72, 0.51), Vector3(0.78, 0.3, 0.1), inner_cloth)
+    _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 0.48, 0.53), Vector3(0.5, 0.12, 0.08), glow)
+
+    if class_id == "phantom":
+        var phantom_hood := _add_part(_body_root, PrismMesh.new(), Vector3(0.0, 2.04, 0.1), Vector3(0.78, 0.82, 0.62), cloth)
+        phantom_hood.rotation_degrees.x = -8.0
+        _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 2.0, -0.37), Vector3(0.42, 0.08, 0.08), glow)
+        _add_part(_body_root, BoxMesh.new(), Vector3(-0.18, 1.55, 0.48), Vector3(0.18, 0.92, 0.06), glow)
+        _add_part(_body_root, BoxMesh.new(), Vector3(0.18, 1.3, 0.5), Vector3(0.18, 0.74, 0.06), inner_cloth)
+    elif class_id == "bastion":
+        _add_part(_body_root, BoxMesh.new(), Vector3(-0.68, 1.51, 0.0), Vector3(0.62, 0.52, 0.74), metal)
+        _add_part(_body_root, BoxMesh.new(), Vector3(0.68, 1.51, 0.0), Vector3(0.62, 0.52, 0.74), metal)
+        _add_part(_body_root, PrismMesh.new(), Vector3(-0.68, 1.88, -0.06), Vector3(0.4, 0.46, 0.42), glow)
+        _add_part(_body_root, PrismMesh.new(), Vector3(0.68, 1.88, -0.06), Vector3(0.4, 0.46, 0.42), glow)
+        _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 2.31, -0.05), Vector3(0.72, 0.18, 0.62), trim)
+    else:
+        _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 2.31, -0.05), Vector3(0.72, 0.16, 0.55), trim)
 
     _weapon_root = Node3D.new()
     _weapon_root.name = "SignatureWeapon"
-    _weapon_root.position = Vector3(0.55, 1.15, -0.05)
+    _weapon_root.position = Vector3(0.58, 1.16, -0.12)
     _body_root.add_child(_weapon_root)
     match class_id:
         "vanguard":
-            _add_weapon_sword(_weapon_root, glow, metal, 1.25)
-            _add_part(_body_root, BoxMesh.new(), Vector3(-0.67, 1.05, -0.12), Vector3(0.55, 0.72, 0.18), glow)
-            _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 2.23, -0.02), Vector3(0.62, 0.12, 0.48), metal)
+            _add_weapon_sword(_weapon_root, glow, metal, 1.42)
+            var shield := _add_part(_body_root, PrismMesh.new(), Vector3(-0.73, 1.08, -0.22), Vector3(0.72, 1.04, 0.18), trim)
+            shield.rotation_degrees.z = 5.0
+            _add_part(_body_root, PrismMesh.new(), Vector3(-0.73, 1.08, -0.34), Vector3(0.56, 0.86, 0.12), armor)
+            _add_part(_body_root, BoxMesh.new(), Vector3(-0.73, 1.12, -0.42), Vector3(0.1, 0.56, 0.08), glow)
+            _add_part(_body_root, BoxMesh.new(), Vector3(-0.73, 0.65, -0.4), Vector3(0.38, 0.08, 0.08), metal)
         "phantom":
-            _add_part(_body_root, SphereMesh.new(), Vector3(0.0, 2.04, 0.1), Vector3(0.48, 0.5, 0.46), cloth)
-            _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 1.99, -0.31), Vector3(0.36, 0.09, 0.08), glow)
-            _add_weapon_sword(_weapon_root, glow, metal, 0.92)
+            _add_part(_body_root, BoxMesh.new(), Vector3(0.0, 1.95, 0.28), Vector3(0.66, 0.18, 0.12), glow)
+            _add_weapon_sword(_weapon_root, glow, metal, 1.0)
             var second := Node3D.new()
-            second.position = Vector3(-1.1, 0.0, 0.0)
+            second.position = Vector3(-1.05, 0.05, 0.08)
+            second.rotation_degrees.z = 10.0
             _weapon_root.add_child(second)
-            _add_weapon_sword(second, glow, metal, 0.92)
+            _add_weapon_sword(second, glow, metal, 0.96)
         "bastion":
-            _add_part(_body_root, BoxMesh.new(), Vector3(-0.61, 1.52, 0.0), Vector3(0.48, 0.39, 0.62), metal)
-            _add_part(_body_root, BoxMesh.new(), Vector3(0.61, 1.52, 0.0), Vector3(0.48, 0.39, 0.62), metal)
-            _add_part(_weapon_root, CylinderMesh.new(), Vector3(0.0, 0.6, 0.0), Vector3(0.11, 0.85, 0.11), metal)
-            _add_part(_weapon_root, BoxMesh.new(), Vector3(0.0, 1.28, 0.0), Vector3(0.72, 0.62, 0.68), glow)
+            _add_part(_weapon_root, CylinderMesh.new(), Vector3(0.0, 0.8, 0.0), Vector3(0.13, 1.18, 0.13), metal)
+            _add_part(_weapon_root, CylinderMesh.new(), Vector3(0.0, 1.48, 0.0), Vector3(0.08, 0.3, 0.08), trim)
+            _add_part(_weapon_root, BoxMesh.new(), Vector3(0.0, 1.98, 0.0), Vector3(1.02, 0.78, 0.72), glow)
+            _add_part(_weapon_root, BoxMesh.new(), Vector3(0.0, 1.98, -0.38), Vector3(0.66, 0.46, 0.16), metal)
+            for side in [-1.0, 1.0]:
+                _add_part(_weapon_root, PrismMesh.new(), Vector3(side * 0.6, 1.98, 0.0), Vector3(0.34, 0.52, 0.6), trim)
+            _add_part(_weapon_root, BoxMesh.new(), Vector3(0.0, 1.98, -0.48), Vector3(0.14, 0.4, 0.1), glow)
 
 func _add_weapon_sword(parent: Node3D, blade_material: Material, hilt_material: Material, length: float) -> void:
-    _add_part(parent, BoxMesh.new(), Vector3(0.0, length * 0.58, 0.0), Vector3(0.12, length, 0.07), blade_material)
-    _add_part(parent, BoxMesh.new(), Vector3(0.0, 0.05, 0.0), Vector3(0.42, 0.07, 0.12), hilt_material)
-    _add_part(parent, CylinderMesh.new(), Vector3(0.0, -0.15, 0.0), Vector3(0.07, 0.34, 0.07), hilt_material)
-
+    var blade := PrismMesh.new()
+    blade.size = Vector3(0.22, length, 0.1)
+    blade.subdivide_depth = 1
+    _add_part(parent, blade, Vector3(0.0, length * 0.62, 0.0), Vector3.ONE, blade_material)
+    _add_part(parent, BoxMesh.new(), Vector3(0.0, 0.08, 0.0), Vector3(0.52, 0.09, 0.16), hilt_material)
+    _add_part(parent, CylinderMesh.new(), Vector3(0.0, -0.2, 0.0), Vector3(0.075, 0.42, 0.075), hilt_material)
+    _add_part(parent, SphereMesh.new(), Vector3(0.0, -0.43, 0.0), Vector3(0.16, 0.16, 0.16), blade_material)
 func _add_part(parent: Node3D, mesh: PrimitiveMesh, position: Vector3, scale: Vector3, material: Material) -> MeshInstance3D:
     var instance := MeshInstance3D.new()
     instance.mesh = mesh
