@@ -31,7 +31,7 @@ static func normalise(raw_data: Variant) -> Dictionary:
     result["vitality_rank"] = clampi(int(raw_data.get("vitality_rank", 0)), 0, 10)
 
     var quality := str(raw_data.get("quality", "balanced")).to_lower()
-    if ["performance", "balanced", "high"].has(quality):
+    if ["performance", "balanced", "high", "ultra"].has(quality):
         result["quality"] = quality
 
     result["music_volume"] = clampf(float(raw_data.get("music_volume", 0.7)), 0.0, 1.0)
