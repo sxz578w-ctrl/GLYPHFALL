@@ -235,13 +235,19 @@ func _apply_quality(quality: String) -> void:
     var viewport := get_viewport()
     match quality:
         "performance":
-            viewport.scaling_3d_scale = 0.72
+            viewport.scaling_3d_scale = 0.68
             viewport.msaa_3d = Viewport.MSAA_DISABLED
+        "balanced":
+            viewport.scaling_3d_scale = 0.82
+            viewport.msaa_3d = Viewport.MSAA_2X
         "high":
             viewport.scaling_3d_scale = 1.0
             viewport.msaa_3d = Viewport.MSAA_4X
+        "ultra":
+            viewport.scaling_3d_scale = 1.15
+            viewport.msaa_3d = Viewport.MSAA_4X
         _:
-            viewport.scaling_3d_scale = 0.86
+            viewport.scaling_3d_scale = 0.82
             viewport.msaa_3d = Viewport.MSAA_2X
 func _persist_save() -> void:
     if player == null:
