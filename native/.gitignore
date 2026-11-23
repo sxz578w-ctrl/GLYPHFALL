@@ -1,0 +1,5 @@
+.godot/
+native/.godot/
+native/build/
+native/android/build/
+native/.export/
