@@ -45,7 +45,8 @@ func _spawn_site_enemies() -> void:
             var position := Vector3(x, world_builder.terrain_height(x, z), z)
             var enemy := EnemySceneScript.new()
             enemy.name = "%s_Sentinel_%02d" % [id, i + 1]
-            enemy.configure(player, center, radius, position, site["accent"])
+            var archetype := "sentinel" if i % 3 == 0 else "wraith" if i % 3 == 1 else "brute"
+            enemy.configure(player, center, radius, position, site["accent"], archetype)
             enemy.defeated.connect(_on_enemy_defeated)
             add_child(enemy)
             enemies.append(enemy)
