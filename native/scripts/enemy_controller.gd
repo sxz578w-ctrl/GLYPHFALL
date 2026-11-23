@@ -3,6 +3,8 @@ class_name EnemyController
 
 const WorldRules = preload("res://scripts/world_rules.gd")
 
+signal defeated(shard_reward: int)
+
 enum State { DORMANT, ALERT, ENGAGE, RETURN_HOME, DEFEATED }
 
 var player: PlayerController
@@ -97,6 +99,7 @@ func take_damage(amount: float) -> void:
     if health <= 0.0:
         state = State.DEFEATED
         remove_from_group("hostiles")
+        defeated.emit(7)
         queue_free()
 
 func _create_visual(tint: Color) -> void:
