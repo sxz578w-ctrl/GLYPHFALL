@@ -41,5 +41,7 @@ jobs:
         run: godot --headless --path native --script res://tests/test_world_builder.gd
       - name: UI contract tests
         run: godot --headless --path native --script res://tests/test_ui_contract.gd
+      - name: Visual ascension contract tests
+        run: godot --headless --path native --script res://tests/test_visual_ascension.gd
       - name: Main scene smoke test
         run: godot --headless --path native --script res://tests/smoke_test.gd

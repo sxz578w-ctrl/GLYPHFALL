@@ -96,6 +96,7 @@ jobs:
         run: |
           godot --headless --path native --script res://tests/test_save_service.gd
           godot --headless --path native --script res://tests/test_ui_contract.gd
+          godot --headless --path native --script res://tests/test_visual_ascension.gd
 
       - name: Run main scene smoke test
         run: godot --headless --path native --script res://tests/smoke_test.gd
