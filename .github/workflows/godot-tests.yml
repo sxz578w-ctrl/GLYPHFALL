@@ -38,7 +38,7 @@ jobs:
       - name: Save service tests
         run: godot --headless --path native --script res://tests/test_save_service.gd
       - name: World builder tests
-        run: godot --headless --path native --script res://tests/test_world_builder.gd
+        run: timeout 60s godot --headless --path native --script res://tests/test_world_builder.gd
       - name: UI contract tests
         run: godot --headless --path native --script res://tests/test_ui_contract.gd
       - name: Visual ascension contract tests
