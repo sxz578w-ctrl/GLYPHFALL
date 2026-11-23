@@ -7,6 +7,7 @@ func _initialize() -> void:
     _test_encounter_boundaries()
     _test_enemy_never_chases_outside_owned_site()
     _test_class_profiles_are_distinct()
+    _test_world_bounds()
     print("GLYPHFALL native world-rule tests: PASS")
     quit()
 
@@ -40,3 +41,8 @@ func _test_class_profiles_are_distinct() -> void:
     assert(vanguard["role"] == "guardian")
     assert(phantom["role"] == "assassin")
     assert(bastion["role"] == "breaker")
+
+func _test_world_bounds() -> void:
+    assert(WorldRules.is_inside_world(Vector3(0, 0, 0)))
+    assert(WorldRules.is_inside_world(Vector3(235, 0, -235)))
+    assert(not WorldRules.is_inside_world(Vector3(236, 0, 0)))
