@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: glyphfall-godot-tests-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -26,10 +30,10 @@ jobs:
           sudo ln -sf /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 /usr/local/bin/godot
           godot --version
       - name: Import project
-        run: godot --headless --editor --path native --quit
+        run: timeout 180s godot --headless --editor --path native --quit
       - name: World and combat rules tests
         run: |
-          godot --headless --path native --script res://tests/test_world_rules.gd
+          timeout 90s godot --headless --path native --script res://tests/test_world_rules.gd
           godot --headless --path native --script res://tests/test_combat_rules.gd
       - name: Save service tests
         run: godot --headless --path native --script res://tests/test_save_service.gd
