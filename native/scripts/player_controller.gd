@@ -144,6 +144,19 @@ func restore_energy(amount: float) -> void:
     energy = minf(max_energy, energy + maxf(0.0, amount))
     energy_changed.emit(energy, max_energy)
 
+func reset_at_spawn(spawn_position: Vector3) -> void:
+    global_position = spawn_position
+    velocity = Vector3.ZERO
+    health = max_health
+    energy = max_energy
+    _attack_cooldown = 0.0
+    _skill_cooldown = 0.0
+    _dodge_timer = 0.0
+    _guard_timer = 0.0
+    _invulnerable_timer = 0.8
+    health_changed.emit(health, max_health)
+    energy_changed.emit(energy, max_energy)
+
 func _physics_process(delta: float) -> void:
     _attack_cooldown = maxf(0.0, _attack_cooldown - delta)
     _skill_cooldown = maxf(0.0, _skill_cooldown - delta)
