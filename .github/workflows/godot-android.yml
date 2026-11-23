@@ -95,11 +95,11 @@ jobs:
       - name: Run save and UI tests
         run: |
           godot --headless --path native --script res://tests/test_save_service.gd
-          godot --headless --path native --script res://tests/test_ui_contract.gd
+          timeout 45s godot --headless --path native --script res://tests/test_ui_contract.gd
           godot --headless --path native --script res://tests/test_visual_ascension.gd
 
       - name: Run main scene smoke test
-        run: godot --headless --path native --script res://tests/smoke_test.gd
+        run: timeout 60s godot --headless --path native --script res://tests/smoke_test.gd
 
       - name: Export native Android APK
         run: |

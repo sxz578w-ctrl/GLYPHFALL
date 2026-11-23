@@ -3,9 +3,12 @@ extends SceneTree
 const GameUIScript = preload("res://scripts/game_ui.gd")
 
 func _initialize() -> void:
+    print("ui-contract: instantiate")
     var ui := GameUIScript.new()
     root.add_child(ui)
+    print("ui-contract: ready-complete")
     await process_frame
+    print("ui-contract: frame-complete")
     assert(ui.has_signal("start_game"))
     assert(ui.has_signal("class_selected"))
     assert(ui.has_signal("action_requested"))
@@ -14,16 +17,19 @@ func _initialize() -> void:
     assert(ui.has_method("get_visual_contract"))
     assert(ResourceLoader.load("res://scripts/virtual_joystick.gd") != null, "Touch joystick script must compile")
     assert(ui.find_child("MoveJoystick", true, false) != null, "Touch joystick must be part of the HUD")
+    print("ui-contract: signal-contract")
     ui.set_selected_class("phantom")
     assert(ui.selected_class == "phantom")
     ui.set_selected_class("bastion")
     assert(ui.selected_class == "bastion")
     var merchant_closed := [false]
     ui.merchant_closed.connect(func(): merchant_closed[0] = true)
+    print("ui-contract: keeper-open")
     ui.show_keeper(125)
     assert(ui._keeper_panel != null and ui._keeper_panel.visible)
     ui.update_keeper_shards(75)
     ui.close_keeper()
+    print("ui-contract: keeper-close")
     assert(merchant_closed[0])
     assert(not ui._keeper_panel.visible)
     print("GLYPHFALL native UI contract tests: PASS")
