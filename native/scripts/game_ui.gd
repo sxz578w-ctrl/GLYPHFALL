@@ -15,6 +15,11 @@ const WorldRules = preload("res://scripts/world_rules.gd")
 const VirtualJoystickScript = preload("res://scripts/virtual_joystick.gd")
 
 const CLASS_ORDER: PackedStringArray = ["vanguard", "phantom", "bastion"]
+const CLASS_ICON_PATHS: Dictionary = {
+    "vanguard": "res://assets/icons/hero-vanguard.svg",
+    "phantom": "res://assets/icons/hero-phantom.svg",
+    "bastion": "res://assets/icons/hero-bastion.svg"
+}
 const ICON_PATHS: Dictionary = {
     "attack": "res://assets/icons/attack.svg",
     "heavy": "res://assets/icons/heavy.svg",
@@ -36,6 +41,7 @@ var _pause_panel: PanelContainer
 var _settings_panel: PanelContainer
 var _game_over_panel: PanelContainer
 var _class_title: Label
+var _class_art: TextureRect
 var _class_weapon: Label
 var _class_ability: Label
 var _class_description: Label
@@ -56,6 +62,9 @@ func _ready() -> void:
     _build_pause_panel()
     _build_settings_panel()
     show_menu()
+    _menu_root.modulate.a = 0.0
+    var intro_tween := create_tween()
+    intro_tween.tween_property(_menu_root, "modulate:a", 1.0, 0.85)
 
 func show_menu() -> void:
     _menu_root.visible = true
@@ -135,8 +144,8 @@ func _build_main_menu() -> void:
     background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-    if ResourceLoader.exists("res://assets/main_keyart.webp"):
-        background.texture = load("res://assets/main_keyart.webp")
+    if ResourceLoader.exists("res://assets/main_keyart.svg"):
+        background.texture = load("res://assets/main_keyart.svg")
     _menu_root.add_child(background)
 
     var overlay := ColorRect.new()
@@ -194,6 +203,12 @@ func _build_top_bar() -> Control:
     var row := HBoxContainer.new()
     row.add_theme_constant_override("separation", 16)
     bar.add_child(row)
+    var brand_icon := TextureRect.new()
+    brand_icon.custom_minimum_size = Vector2(42.0, 42.0)
+    brand_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    brand_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    brand_icon.texture = load("res://assets/icon.svg")
+    row.add_child(brand_icon)
     var brand := VBoxContainer.new()
     brand.add_theme_constant_override("separation", 0)
     brand.add_child(_label("GLYPHFALL", 25, Color(0.84, 0.94, 1.0)))
@@ -243,11 +258,22 @@ func _build_class_detail_panel() -> Control:
     column.add_theme_constant_override("separation", 11)
     panel.add_child(column)
     column.add_child(_label("SELECT YOUR PATH", 11, Color(0.35, 0.79, 1.0)))
+    var hero_heading := HBoxContainer.new()
+    hero_heading.add_theme_constant_override("separation", 18)
+    _class_art = TextureRect.new()
+    _class_art.custom_minimum_size = Vector2(108.0, 108.0)
+    _class_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    _class_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    hero_heading.add_child(_class_art)
+    var hero_intro := VBoxContainer.new()
+    hero_intro.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _class_title = _label("VANGUARD  •  الحارس", 29, Color(0.92, 0.97, 1.0))
-    column.add_child(_class_title)
+    hero_intro.add_child(_class_title)
     _class_description = _label("", 12, Color(0.73, 0.83, 0.94))
     _class_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    column.add_child(_class_description)
+    hero_intro.add_child(_class_description)
+    hero_heading.add_child(hero_intro)
+    column.add_child(hero_heading)
     column.add_child(_separator())
 
     var equipment := HBoxContainer.new()
@@ -314,9 +340,11 @@ func _build_roster_panel() -> Control:
         var card_row := HBoxContainer.new()
         card_row.add_theme_constant_override("separation", 12)
         card.add_child(card_row)
-        var emblem := _label(_class_emblem(class_id), 31, profile["accent"])
-        emblem.custom_minimum_size.x = 46
-        emblem.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        var emblem := TextureRect.new()
+        emblem.custom_minimum_size = Vector2(54.0, 54.0)
+        emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+        emblem.texture = load(str(CLASS_ICON_PATHS[class_id]))
         card_row.add_child(emblem)
         var text_column := VBoxContainer.new()
         text_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -521,6 +549,7 @@ func _select_class(class_id: String) -> void:
 func _update_class_details() -> void:
     var profile := WorldRules.class_profile(selected_class)
     _class_title.text = str(profile["title"]) + "  •  " + str(profile["name"])
+    _class_art.texture = load(str(CLASS_ICON_PATHS[selected_class]))
     _class_weapon.text = "⚔  " + str(profile["weapon_ar"]) + "  /  " + str(profile["weapon"])
     _class_ability.text = "✧  " + str(profile["ability_ar"]) + "  /  " + str(profile["ability"])
     _class_description.text = str(profile["description"])
