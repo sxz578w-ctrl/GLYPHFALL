@@ -1,5 +1,5 @@
 extends Control
-class_name VirtualJoystick
+class_name GlyphfallTouchStick
 
 signal direction_changed(value: Vector2)
 
@@ -17,7 +17,7 @@ func _gui_input(event: InputEvent) -> void:
     if event is InputEventScreenTouch:
         if event.pressed:
             _pressed = true
-            _update_direction(to_local(event.position))
+            _update_direction(_screen_to_local(event.position))
         else:
             _release_stick()
     elif event is InputEventScreenDrag and _pressed:
@@ -30,6 +30,10 @@ func _gui_input(event: InputEvent) -> void:
             _release_stick()
     elif event is InputEventMouseMotion and _pressed:
         _update_direction(get_local_mouse_position())
+
+func _screen_to_local(screen_position: Vector2) -> Vector2:
+    var inverse_canvas_transform: Transform2D = get_global_transform_with_canvas().affine_inverse()
+    return inverse_canvas_transform * screen_position
 
 func _update_direction(point: Vector2) -> void:
     var center := size * 0.5

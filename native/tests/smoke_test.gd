@@ -11,7 +11,18 @@ func _initialize() -> void:
     assert(instance.has_node("Player"), "Player must be composed")
     assert(instance.has_node("EncounterManager"), "EncounterManager must be composed")
     assert(instance.has_node("GameUI"), "GameUI must be composed")
+    var ui_node: Node = instance.get_node("GameUI")
+    assert(ui_node.has_method("get_visual_contract"), "GameUI visual contract must load")
+    var required_scripts := [
+        "res://scripts/virtual_joystick.gd",
+        "res://scripts/world_builder.gd",
+        "res://scripts/player_controller.gd",
+        "res://scripts/enemy_controller.gd",
+        "res://scripts/game_ui.gd"
+    ]
+    for script_path in required_scripts:
+        assert(ResourceLoader.load(script_path) != null, "Required script must compile: " + script_path)
     print("GLYPHFALL native scene smoke test: PASS")
-    get_tree().paused = false
+    paused = false
     instance.queue_free()
     quit()

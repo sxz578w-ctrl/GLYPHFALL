@@ -30,6 +30,10 @@ func _initialize() -> void:
     assert(str(ui_contract.get("menu_art", "")) == "res://assets/main_keyart.svg", "cinematic menu key art must be loaded")
     assert(bool(ui_contract.get("intro_animation", false)), "menu entrance must be animated")
     assert(int(ui_contract.get("action_icon_count", 0)) >= 10, "all combat and navigation icons must exist")
+    for icon_name in ["attack", "heavy", "guard", "dodge", "skill", "interact", "rebuild", "pause", "settings", "map"]:
+        assert(ResourceLoader.exists("res://assets/icons/" + icon_name + ".svg"), "Missing action icon: " + icon_name)
+    for class_icon in ["hero-vanguard", "hero-phantom", "hero-bastion"]:
+        assert(ResourceLoader.exists("res://assets/icons/" + class_icon + ".svg"), "Missing class emblem: " + class_icon)
 
     var profiles := WorldRules.all_class_profiles()
     assert(profiles.size() == 3, "all class profiles remain selectable")
