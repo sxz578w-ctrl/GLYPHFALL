@@ -2,7 +2,9 @@ extends RefCounted
 class_name SaveService
 
 const SAVE_PATH: String = "user://glyphfall_save.json"
-const SAVE_VERSION: int = 1
+const ProgressionService = preload("res://scripts/progression_service.gd")
+const SAVE_VERSION: int = 2
+const PREVIOUS_SAVE_VERSION: int = 1
 const DEFAULTS: Dictionary = {
     "version": SAVE_VERSION,
     "selected_class": "vanguard",
@@ -12,14 +14,16 @@ const DEFAULTS: Dictionary = {
     "quality": "balanced",
     "music_volume": 0.7,
     "effects_volume": 0.8,
-    "checkpoint": "safe_haven"
+    "checkpoint": "safe_haven",
+    "progression": {}
 }
 
 static func normalise(raw_data: Variant) -> Dictionary:
     var result: Dictionary = DEFAULTS.duplicate(true)
     if not raw_data is Dictionary:
         return result
-    if int(raw_data.get("version", -1)) != SAVE_VERSION:
+    var source_version: int = int(raw_data.get("version", -1))
+    if source_version != PREVIOUS_SAVE_VERSION and source_version != SAVE_VERSION:
         return result
 
     var selected_class := str(raw_data.get("selected_class", "vanguard")).to_lower()
@@ -41,6 +45,7 @@ static func normalise(raw_data: Variant) -> Dictionary:
     if ["safe_haven", "outskirts", "mirkwood", "sunken_grove"].has(checkpoint):
         result["checkpoint"] = checkpoint
 
+    result["progression"] = ProgressionService.normalise(raw_data.get("progression", {}))
     result["version"] = SAVE_VERSION
     return result
 
