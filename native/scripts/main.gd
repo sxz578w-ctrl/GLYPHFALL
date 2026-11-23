@@ -23,6 +23,8 @@ func _ready() -> void:
     _create_ui()
     _connect_systems()
     _apply_quality(str(save_data["quality"]))
+    player.damage_rank = int(save_data["damage_rank"])
+    player.vitality_rank = int(save_data["vitality_rank"])
     player.select_class(str(save_data["selected_class"]))
     game_ui.set_selected_class(str(save_data["selected_class"]))
     player.shards = int(save_data["shards"])
@@ -63,6 +65,9 @@ func _connect_systems() -> void:
     game_ui.resume_requested.connect(_resume_game)
     game_ui.new_game_requested.connect(_return_to_menu)
     game_ui.retry_requested.connect(_retry_at_safe_haven)
+    game_ui.purchase_requested.connect(_on_keeper_purchase)
+    game_ui.merchant_closed.connect(_close_keeper)
+    encounters.shards_awarded.connect(_on_shards_awarded)
     player.health_changed.connect(game_ui.update_health)
     player.energy_changed.connect(game_ui.update_energy)
     player.defeated.connect(_on_player_defeated)
@@ -116,9 +121,10 @@ func _on_action_requested(action_id: String) -> void:
             player.use_class_skill()
         "interact":
             if WorldRules.is_safe_haven(player.global_position):
-                game_ui.set_status("الملاذ الآمن: التاجر ومحطات التطوير متاحة هنا.")
+                get_tree().paused = true
+                game_ui.show_keeper(player.shards)
             else:
-                game_ui.set_status("لا يوجد تفاعل قريب. اتجه إلى الملاذ أو نقطة المرساة.")
+                game_ui.notify_event("لا يوجد تاجر قريب. عد إلى الملاذ الآمن.")
         "rebuild":
             if WorldRules.is_safe_haven(player.global_position):
                 player.restore_health(24.0)
@@ -189,6 +195,8 @@ func _apply_quality(quality: String) -> void:
 func _persist_save() -> void:
     save_data["selected_class"] = player.class_id if player != null else "vanguard"
     save_data["shards"] = player.shards if player != null else 0
+    save_data["damage_rank"] = player.damage_rank if player != null else 0
+    save_data["vitality_rank"] = player.vitality_rank if player != null else 0
     SaveServiceScript.write_save(save_data)
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -206,3 +214,67 @@ func _unhandled_input(event: InputEvent) -> void:
             player.use_class_skill()
         elif event.keycode == KEY_SHIFT and _playing:
             player.dodge()
+ 
+func _on_shards_awarded(amount: int) -> void:
+    player.shards += amount
+    game_ui.update_hud(player.shards, _current_zone_title(), "اجمع الشظايا وطوّر سلاحك من الملاذ الآمن.")
+    game_ui.notify_event("+%d SHARDS  •  تم جمع الشظايا" % amount)
+    if get_tree().paused:
+        game_ui.update_keeper_shards(player.shards)
+    _persist_save()
+
+func _on_keeper_purchase(item_id: String) -> void:
+    var costs := {
+        "health": 10,
+        "energy": 8,
+        "damage": 45,
+        "vitality": 40
+    }
+    var cost := int(costs.get(item_id, 999999))
+    if player.shards < cost:
+        game_ui.notify_event("لا توجد شظايا كافية  •  INSUFFICIENT SHARDS")
+        return
+    var purchased := true
+    match item_id:
+        "health":
+            player.shards -= cost
+            player.restore_health(65.0)
+        "energy":
+            player.shards -= cost
+            player.restore_energy(65.0)
+        "damage":
+            purchased = player.purchase_upgrade("damage")
+            if purchased:
+                player.shards -= cost
+        "vitality":
+            purchased = player.purchase_upgrade("vitality")
+            if purchased:
+                player.shards -= cost
+        _:
+            purchased = false
+    if not purchased:
+        game_ui.notify_event("وصلت هذه الترقية إلى الحد الأقصى.")
+        return
+    game_ui.update_keeper_shards(player.shards)
+    game_ui.update_hud(player.shards, "SAFE HAVEN  •  الملاذ الآمن", "تم الشراء. يمكنك متابعة الاستكشاف.")
+    game_ui.notify_event("تم تنفيذ عملية الشراء بنجاح.")
+    _persist_save()
+
+func _close_keeper() -> void:
+    get_tree().paused = false
+
+func _on_shards_awarded(amount: int) -> void:
+    player.shards += amount
+    game_ui.update_hud(player.shards, _current_zone_title(), "اجمع الشظايا وطوّر سلاحك من الملاذ الآمن.")
+    game_ui.notify_event("+%d SHARDS  •  تم جمع الشظايا" % amount)
+    _persist_save()
+
+func _current_zone_title() -> String:
+    if WorldRules.is_safe_haven(player.global_position):
+        return "SAFE HAVEN  •  الملاذ الآمن"
+    var site_id := encounters.get_current_site_id()
+    if site_id == "mirkwood":
+        return "MIRKWOOD WILDS  •  غابة الظلال"
+    if site_id == "sunken_grove":
+        return "SUNKEN GROVE  •  البستان الغارق"
+    return "THE OUTSKIRTS  •  البراري"
