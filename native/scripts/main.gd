@@ -243,8 +243,6 @@ func _apply_quality(quality: String) -> void:
         _:
             viewport.scaling_3d_scale = 0.86
             viewport.msaa_3d = Viewport.MSAA_2X
-    _persist_save()
-
 func _persist_save() -> void:
     if player == null:
         return
