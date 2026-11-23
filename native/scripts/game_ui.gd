@@ -691,7 +691,7 @@ func _update_class_details() -> void:
     _class_description.text = str(profile["description"])
     for class_id in _class_buttons:
         var button: Button = _class_buttons[class_id]
-        var active := class_id == selected_class
+        var active: bool = class_id == selected_class
         button.modulate = Color.WHITE if active else Color(0.72, 0.8, 0.92)
         var accent: Color = WorldRules.class_profile(class_id)["accent"]
         button.add_theme_stylebox_override("normal", _panel_style(

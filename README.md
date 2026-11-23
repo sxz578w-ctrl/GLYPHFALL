@@ -1,55 +1,43 @@
 # GLYPHFALL — The Broken World
 
-Android-first third-person survival-action RPG set in a fractured world of ancient ruins, anomaly forests, and safe havens.
+**Native Android build:** Godot 4.7.2 Stable · GDScript · Mobile renderer · Landscape · Arabic-first UI.
 
-## Active engine
+## Visual Ascension 0.3.0
 
-The active visual/gameplay foundation is **Godot 4.7.2 Stable**, GDScript, and the Mobile renderer. The earlier Three.js/WebView prototype remains under `app/` as a fallback while native parity is developed.
+- Eclipse Frontier visual identity with a cinematic scalable SVG main-menu background and custom app mark.
+- A redesigned single-screen class roster with three class identities, signature weapons, ability labels and clear selected states.
+- Redesigned combat/action icon set for attack, heavy attack, guard, dodge, skill, interact, rebuild, map, pause and settings.
+- Revised safe-haven architecture with facade courses, deep window frames, door recesses, rooftop silhouettes, banners, market stalls and beacons.
+- Higher-density terrain, layered conifer silhouettes, broadleaf forest, instanced understory and crystal gardens.
+- Sentinel, Wraith and Brute encounter silhouettes while preserving site-bounded engagement.
+- Filmic sky, selective glow/fog, reflective anomaly water and Performance/Balanced/High/Ultra quality options.
+- MultiMesh batching for repeated vegetation, window details and architectural trim to control mobile draw calls.
 
-## Native project
+## Build and verify
 
-Open `native/project.godot` with Godot 4.7.2 Stable.
+The repository contains two GitHub Actions pipelines:
+- **GLYPHFALL Godot Native Tests** — imports the native project, validates world/combat/save/UI contracts, visual acceptance and scene startup.
+- **GLYPHFALL Native Android APK** — imports and tests the project, exports an arm64 Android APK, validates the package and uploads the APK artifact.
 
-- Landscape-first, Arabic-first UI.
-- Main roster screen with VANGUARD, PHANTOM, and BASTION.
-- Third-person player controller and signature melee weapons.
-- SAFE HAVEN settlement, outskirts, Mirkwood, Sunken Grove, and bounded encounter sites.
-- Enemy AI is site-bound; enemies do not pursue outside their owning encounter radius.
-- Versioned local settings/progression save.
-- Touch joystick, attack, heavy strike, guard, dodge, skill, interact, rebuild, and pause controls.
-- Scalable SVG scene art, class emblems, combat iconography, and app identity.
-- Performance, Balanced, and High graphics presets; adaptive 3D render scale.
+Run manually from GitHub: **Actions → GLYPHFALL Native Android APK → Run workflow**.
 
-## Native Android APK
+## Android requirements
 
-The workflow `.github/workflows/godot-android.yml` downloads the matching Godot 4.7.2 Stable editor and export templates, installs JDK 17 and Android SDK dependencies, runs headless tests, exports the APK, verifies the package ID, and uploads the `GLYPHFALL-NATIVE-ANDROID-APK` artifact.
+- Android 7.0+ (API 24+), ARM64
+- Landscape display
+- Godot 4.7.2 Android export templates installed in CI
+- No paid API or account required
+- Internet permission is disabled in the Android preset; all current runtime assets are bundled in the APK.
 
-A push to `main` that changes `native/**` starts the build automatically. The latest APK is downloaded from the successful GitHub Actions run.
+## Graphics profiles
 
-## Local build requirements
+- Performance: 0.68 3D scale, no MSAA
+- Balanced: 0.82 scale, MSAA 2×
+- High: 1.00 scale, MSAA 4×
+- Ultra: 1.15 scale, MSAA 4×
 
-- Godot 4.7.2 Stable (standard build, not .NET)
-- OpenJDK 17
-- Android SDK Platform 35, Build Tools 35.0.1, Platform Tools, NDK 28.1.13356709, CMake 3.10.2.4988404
-- Matching Godot 4.7.2 export templates
+Ultra is device-dependent. It does not force 4K/8K render targets on phones; SVG art scales cleanly, while the 3D render scale adapts to device GPU and thermal limits.
 
-Export preset: `Android`
+## Release scope
 
-```bash
-godot --headless --editor --path native --quit
-godot --headless --path native --script res://tests/test_world_rules.gd
-godot --headless --path native --script res://tests/test_combat_rules.gd
-godot --headless --path native --script res://tests/test_save_service.gd
-godot --headless --path native --script res://tests/test_world_builder.gd
-godot --headless --path native --script res://tests/test_ui_contract.gd
-godot --headless --path native --script res://tests/smoke_test.gd
-godot --headless --path native --export-debug Android build/GLYPHFALL-Android.apk
-```
-
-## Scope and quality statement
-
-This is a native, playable vertical slice and a scalable foundation, not a finished commercial AAA release. It uses procedural/primitive 3D geometry and custom vector art; it does not yet contain a full authored campaign, production character rigging, motion-captured animation, voice acting, multiplayer, or a large professionally authored asset library. These are separate production milestones. Device testing is required before public release.
-
-## Legacy fallback
-
-The previous Three.js/WebView prototype remains in `app/src/main/assets/index.html` and can still be built through `.github/workflows/android-apk.yml`.
+Version 0.3.0 is a native Android visual/gameplay vertical slice. It is not a commercial AAA-complete game. Planned story chapters, authored cinematic animation sets, full quest/content pipeline, multiplayer, additional biomes, platform certification, extensive device QA and a production-scale 3D asset library remain future production work.

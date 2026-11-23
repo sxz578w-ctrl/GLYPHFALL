@@ -67,8 +67,8 @@ func _input(event: InputEvent) -> void:
     var viewport_size := get_viewport().get_visible_rect().size
     if event is InputEventScreenTouch:
         if event.pressed:
-            var in_camera_area := event.position.x > viewport_size.x * 0.46
-            var above_action_buttons := event.position.y < viewport_size.y * 0.7
+            var in_camera_area: bool = event.position.x > viewport_size.x * 0.46
+            var above_action_buttons: bool = event.position.y < viewport_size.y * 0.7
             if in_camera_area and above_action_buttons:
                 _look_touch_index = event.index
         elif event.index == _look_touch_index:

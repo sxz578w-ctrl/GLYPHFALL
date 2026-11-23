@@ -282,6 +282,7 @@ func _build_safe_haven() -> void:
     _create_city_arch(Vector3(0.0, 0.0, 15.0), warm_trim, gold_glow)
     _create_safe_lamps()
 
+
 func _create_building(origin: Vector3, size: Vector3, wall: Material, roof: Material, trim: Material, window: Material) -> void:
     var root := Node3D.new()
     root.name = "CitadelBuilding"
@@ -307,46 +308,58 @@ func _create_building(origin: Vector3, size: Vector3, wall: Material, roof: Mate
     building_body.add_child(building_shape)
     root.add_child(building_body)
 
-    var floors := maxi(1, floori(size.y / 3.0))
-    var windows_per_floor := maxi(2, floori(size.x / 2.65))
+    var floors: int = maxi(1, floori(size.y / 4.0))
+    var windows_per_floor: int = maxi(2, floori(size.x / 3.35))
+    var glass_transforms: Array[Transform3D] = []
+    var vertical_frame_transforms: Array[Transform3D] = []
+    var horizontal_frame_transforms: Array[Transform3D] = []
+    var mullion_transforms: Array[Transform3D] = []
+    var floor_band_transforms: Array[Transform3D] = []
     for floor_index in range(floors):
-        var y := 1.9 + float(floor_index) * 3.0
-        _add_box(root, "StoneFloorBand", Vector3(size.x + 0.22, 0.14, 0.18), Vector3(0.0, y + 0.96, size.z * 0.5 + 0.1), trim)
+        var y := 2.05 + float(floor_index) * 3.55
+        floor_band_transforms.append(Transform3D(Basis.IDENTITY, Vector3(0.0, y + 1.0, size.z * 0.5 + 0.1)))
         for window_index in range(windows_per_floor):
             var x := -size.x * 0.5 + (float(window_index) + 0.5) * size.x / float(windows_per_floor)
-            var w := 0.78
-            var h := 1.38
-            var front_z := size.z * 0.5 + 0.095
-            _add_box(root, "WindowRecess", Vector3(w + 0.28, h + 0.28, 0.16), Vector3(x, y, front_z - 0.075), roof)
-            _add_box(root, "WindowGlass", Vector3(w, h, 0.08), Vector3(x, y, front_z + 0.03), window)
-            _add_box(root, "WindowFrameLeft", Vector3(0.12, h + 0.18, 0.16), Vector3(x - w * 0.5 - 0.07, y, front_z + 0.1), trim)
-            _add_box(root, "WindowFrameRight", Vector3(0.12, h + 0.18, 0.16), Vector3(x + w * 0.5 + 0.07, y, front_z + 0.1), trim)
-            _add_box(root, "WindowSill", Vector3(w + 0.28, 0.14, 0.28), Vector3(x, y - h * 0.5 - 0.08, front_z + 0.13), trim)
-            _add_box(root, "WindowLintel", Vector3(w + 0.28, 0.14, 0.28), Vector3(x, y + h * 0.5 + 0.08, front_z + 0.13), trim)
-            _add_box(root, "WindowMullion", Vector3(0.07, h, 0.1), Vector3(x, y, front_z + 0.17), roof)
-            _add_box(root, "WindowTransom", Vector3(w, 0.07, 0.1), Vector3(x, y + 0.18, front_z + 0.17), roof)
+            var z := size.z * 0.5 + 0.13
+            glass_transforms.append(Transform3D(Basis.IDENTITY, Vector3(x, y, z)))
+            vertical_frame_transforms.append(Transform3D(Basis.IDENTITY, Vector3(x - 0.48, y, z + 0.065)))
+            vertical_frame_transforms.append(Transform3D(Basis.IDENTITY, Vector3(x + 0.48, y, z + 0.065)))
+            horizontal_frame_transforms.append(Transform3D(Basis.IDENTITY, Vector3(x, y - 0.76, z + 0.08)))
+            horizontal_frame_transforms.append(Transform3D(Basis.IDENTITY, Vector3(x, y + 0.76, z + 0.08)))
+            mullion_transforms.append(Transform3D(Basis.IDENTITY, Vector3(x, y, z + 0.095)))
 
+    _add_box_multimesh(root, "WindowGlassBatch", Vector3(0.78, 1.35, 0.08), glass_transforms, window)
+    _add_box_multimesh(root, "WindowFrameVerticalBatch", Vector3(0.12, 1.54, 0.16), vertical_frame_transforms, trim)
+    _add_box_multimesh(root, "WindowFrameHorizontalBatch", Vector3(1.08, 0.14, 0.22), horizontal_frame_transforms, trim)
+    _add_box_multimesh(root, "WindowMullionBatch", Vector3(0.065, 1.35, 0.12), mullion_transforms, roof)
+    _add_box_multimesh(root, "FloorBandBatch", Vector3(size.x + 0.28, 0.12, 0.2), floor_band_transforms, trim)
+
+    var buttress_transforms: Array[Transform3D] = []
+    var buttress_cap_transforms: Array[Transform3D] = []
     for side in [-1.0, 1.0]:
-        var x_corner := side * (size.x * 0.5 - 0.28)
-        _add_box(root, "CornerButtress", Vector3(0.58, size.y + 1.0, 0.72), Vector3(x_corner, size.y * 0.5 + base_y, size.z * 0.5 + 0.12), roof)
-        _add_box(root, "ButtressCap", Vector3(0.92, 0.34, 0.94), Vector3(x_corner, size.y + 1.4, size.z * 0.5 + 0.12), trim)
+        var x_corner: float = float(side) * (size.x * 0.5 - 0.28)
+        buttress_transforms.append(Transform3D(Basis.IDENTITY, Vector3(x_corner, size.y * 0.5 + base_y, size.z * 0.5 + 0.12)))
+        buttress_cap_transforms.append(Transform3D(Basis.IDENTITY, Vector3(x_corner, size.y + 1.4, size.z * 0.5 + 0.12)))
+    _add_box_multimesh(root, "CornerButtressBatch", Vector3(0.58, size.y + 1.0, 0.72), buttress_transforms, roof)
+    _add_box_multimesh(root, "ButtressCapBatch", Vector3(0.92, 0.34, 0.94), buttress_cap_transforms, trim)
 
     _add_box(root, "EntranceRecess", Vector3(2.2, 3.2, 0.3), Vector3(0.0, 2.3, size.z * 0.5 + 0.14), roof)
-    _add_box(root, "EntranceDoor", Vector3(1.45, 2.45, 0.18), Vector3(0.0, 2.18, size.z * 0.5 + 0.32), dark_stone)
+    _add_box(root, "EntranceDoor", Vector3(1.45, 2.45, 0.18), Vector3(0.0, 2.18, size.z * 0.5 + 0.32), roof)
     _add_box(root, "DoorSigil", Vector3(0.12, 1.85, 0.16), Vector3(0.0, 2.2, size.z * 0.5 + 0.44), window)
     _add_box(root, "DoorHandle", Vector3(0.08, 0.08, 0.08), Vector3(0.48, 2.05, size.z * 0.5 + 0.46), trim)
     _add_box(root, "EntranceStepOne", Vector3(2.8, 0.22, 0.72), Vector3(0.0, 0.12, size.z * 0.5 + 0.72), trim)
     _add_box(root, "EntranceStepTwo", Vector3(2.35, 0.22, 0.48), Vector3(0.0, 0.32, size.z * 0.5 + 0.42), roof)
 
-    var battlement_count := maxi(3, floori(size.x / 2.2))
+    var merlon_transforms: Array[Transform3D] = []
+    var battlement_count: int = maxi(3, floori(size.x / 2.8))
     for i in range(battlement_count):
         var bx := -size.x * 0.5 + float(i) * size.x / float(battlement_count - 1)
-        _add_box(root, "RoofMerlon", Vector3(0.72, 0.72, 0.72), Vector3(bx, size.y + 1.75, 0.0), wall)
+        merlon_transforms.append(Transform3D(Basis.IDENTITY, Vector3(bx, size.y + 1.75, 0.0)))
+    _add_box_multimesh(root, "RoofMerlonBatch", Vector3(0.72, 0.72, 0.72), merlon_transforms, wall)
     _add_box(root, "FrontInsigniaBacking", Vector3(1.0, 1.0, 0.16), Vector3(0.0, size.y + 1.9, size.z * 0.5 + 0.16), roof)
     _add_box(root, "FrontInsignia", Vector3(0.24, 0.72, 0.2), Vector3(0.0, size.y + 1.9, size.z * 0.5 + 0.27), window)
     _add_box(root, "SideBandLeft", Vector3(0.16, size.y + 0.2, size.z * 0.45), Vector3(-size.x * 0.5 - 0.1, size.y * 0.5 + base_y, 0.0), trim)
     _add_box(root, "SideBandRight", Vector3(0.16, size.y + 0.2, size.z * 0.45), Vector3(size.x * 0.5 + 0.1, size.y * 0.5 + base_y, 0.0), trim)
-
 func _create_citadel_tower(origin: Vector3, stone: Material, roof: Material, beacon_material: Material) -> void:
     var root := Node3D.new()
     root.name = "EclipseCitadelTower"
@@ -623,6 +636,25 @@ func _add_crystal(parent: Node, origin: Vector3, height: float, color: Color) ->
     crystal.material_override = _emissive_material(color, 2.4)
     parent.add_child(crystal)
 
+func _add_box_multimesh(parent: Node, node_name: String, dimensions: Vector3, transforms: Array[Transform3D], material: Material) -> MultiMeshInstance3D:
+    if transforms.is_empty():
+        return null
+    var box := BoxMesh.new()
+    box.size = dimensions
+    var multimesh := MultiMesh.new()
+    multimesh.transform_format = MultiMesh.TRANSFORM_3D
+    multimesh.mesh = box
+    multimesh.instance_count = transforms.size()
+    for i in range(transforms.size()):
+        multimesh.set_instance_transform(i, transforms[i])
+    var instance := MultiMeshInstance3D.new()
+    instance.name = node_name
+    instance.multimesh = multimesh
+    instance.material_override = material
+    instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    parent.add_child(instance)
+    return instance
+
 func _add_box(parent: Node, node_name: String, dimensions: Vector3, position: Vector3, material: Material) -> MeshInstance3D:
     var instance := MeshInstance3D.new()
     instance.name = node_name
@@ -645,6 +677,21 @@ func get_visual_contract() -> Dictionary:
         "art_direction": "eclipse_frontier",
         "rendering": "mobile_pbr_multimesh"
     }
+
+func _build_site_markers() -> void:
+    var stone := _material(Color(0.09, 0.14, 0.22), 0.42, 0.72)
+    for site in _encounter_sites:
+        var center: Vector3 = site["center"]
+        var accent: Color = site["accent"]
+        var marker_root := Node3D.new()
+        marker_root.name = "%s_ApproachMarkers" % str(site["id"])
+        marker_root.position = Vector3(center.x, terrain_height(center.x, center.z), center.z)
+        add_child(marker_root)
+        var radius: float = float(site["radius"]) + 4.0
+        for side in [-1.0, 1.0]:
+            var marker_position := Vector3(float(side) * radius * 0.42, 0.0, -radius - 5.0)
+            _add_box(marker_root, "SitePylon", Vector3(0.72, 4.3, 0.72), marker_position + Vector3(0.0, 2.15, 0.0), stone)
+            _add_box(marker_root, "SitePylonGlyph", Vector3(0.18, 2.2, 0.16), marker_position + Vector3(0.0, 2.3, -0.4), _emissive_material(accent, 1.8))
 
 func _create_broadleaf_species(center: Vector3, radius: float, rng: RandomNumberGenerator) -> void:
     var crown_mesh := SphereMesh.new()
