@@ -24,5 +24,14 @@ func _initialize() -> void:
     assert(invalid["selected_class"] == "vanguard")
     assert(invalid["shards"] == 0)
     assert(invalid["quality"] == "balanced")
+    var partial: Dictionary = SaveService.normalise({
+        "version": SaveService.SAVE_VERSION,
+        "selected_class": "bastion",
+        "shards": 50,
+        "music_volume": 4.0,
+        "effects_volume": -2.0
+    })
+    assert(partial["music_volume"] == 1.0)
+    assert(partial["effects_volume"] == 0.0)
     print("GLYPHFALL native save tests: PASS")
     quit()
