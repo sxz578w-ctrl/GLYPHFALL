@@ -10,19 +10,27 @@ func _initialize() -> void:
         "version": SaveService.SAVE_VERSION,
         "selected_class": "phantom",
         "shards": 25,
+        "damage_rank": 4,
+        "vitality_rank": 3,
         "quality": "high"
     })
     assert(valid["selected_class"] == "phantom")
     assert(valid["shards"] == 25)
+    assert(valid["damage_rank"] == 4)
+    assert(valid["vitality_rank"] == 3)
     assert(valid["quality"] == "high")
     var invalid: Dictionary = SaveService.normalise({
         "version": 999,
         "selected_class": "../../invalid",
         "shards": -900,
+        "damage_rank": 900,
+        "vitality_rank": -20,
         "quality": "unlimited"
     })
     assert(invalid["selected_class"] == "vanguard")
     assert(invalid["shards"] == 0)
+    assert(invalid["damage_rank"] == 0)
+    assert(invalid["vitality_rank"] == 0)
     assert(invalid["quality"] == "balanced")
     var partial: Dictionary = SaveService.normalise({
         "version": SaveService.SAVE_VERSION,
