@@ -19,6 +19,11 @@ func _initialize() -> void:
     assert(valid["damage_rank"] == 4)
     assert(valid["vitality_rank"] == 3)
     assert(valid["quality"] == "high")
+    var ultra: Dictionary = SaveService.normalise({
+        "version": SaveService.SAVE_VERSION,
+        "quality": "ultra"
+    })
+    assert(ultra["quality"] == "ultra")
     var invalid: Dictionary = SaveService.normalise({
         "version": 999,
         "selected_class": "../../invalid",
