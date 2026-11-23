@@ -1298,30 +1298,89 @@ function updateClassWeaponVisual(dt) {
 // Silhouette armor makes the three selectable Wardens identifiable during combat.
 const heroArmorGroup = new THREE.Group(); playerGroup.add(heroArmorGroup);
 const heroArmorSets = {};
+const armorSteel = new THREE.MeshPhysicalMaterial({ color: 0x52768c, metalness: 0.78, roughness: 0.24, clearcoat: 0.8, clearcoatRoughness: 0.22 });
+const armorIce = new THREE.MeshPhysicalMaterial({ color: 0x80eaff, metalness: 0.55, roughness: 0.22, emissive: 0x25bfe9, emissiveIntensity: 0.58, clearcoat: 0.7 });
+const armorViolet = new THREE.MeshPhysicalMaterial({ color: 0x8e61c8, metalness: 0.62, roughness: 0.2, emissive: 0x632b9b, emissiveIntensity: 0.55 });
+const armorGold = new THREE.MeshPhysicalMaterial({ color: 0xb87a3e, metalness: 0.82, roughness: 0.3, clearcoat: 0.6 });
+const armorEmber = new THREE.MeshPhysicalMaterial({ color: 0xffba68, metalness: 0.48, roughness: 0.22, emissive: 0xb94d18, emissiveIntensity: 0.55 });
+const bladeIce = new THREE.MeshStandardMaterial({ color: 0xc9faff, metalness: 0.92, roughness: 0.12, emissive: 0x39dfff, emissiveIntensity: 1.15 });
+const bladeViolet = new THREE.MeshStandardMaterial({ color: 0xe2c8ff, metalness: 0.9, roughness: 0.13, emissive: 0x9b45ff, emissiveIntensity: 1.2 });
+function armorPiece(group, geometry, material, position, scale, rotation) {
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.set(position[0], position[1], position[2]);
+  if (scale) mesh.scale.set(scale[0], scale[1], scale[2]);
+  if (rotation) mesh.rotation.set(rotation[0], rotation[1], rotation[2]);
+  mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh); return mesh;
+}
 {
+  // VANGUARD — layered Aegis plate, long blade and a physical tower shield.
   const vanguard = new THREE.Group();
-  const vRing = new THREE.Mesh(new THREE.TorusGeometry(0.78, 0.075, 8, 28), new THREE.MeshBasicMaterial({ color: 0x70eaff, transparent: true, opacity: 0.9 }));
-  vRing.position.y = 1.05; vRing.rotation.x = Math.PI / 2; vanguard.add(vRing);
-  const vShoulder = new THREE.Mesh(new THREE.OctahedronGeometry(0.24, 0), new THREE.MeshBasicMaterial({ color: 0xb5f6ff, wireframe: true }));
-  vShoulder.position.set(0, 1.78, 0); vanguard.add(vShoulder); heroArmorSets.vanguard = vanguard;
+  armorPiece(vanguard, new THREE.DodecahedronGeometry(0.58, 1), armorSteel, [0, 1.25, 0], [0.92, 0.9, 0.65]);
+  armorPiece(vanguard, new THREE.OctahedronGeometry(0.38, 1), armorIce, [0, 1.34, 0.34], [0.85, 0.82, 0.36]);
+  for (const side of [-1, 1]) {
+    armorPiece(vanguard, new THREE.OctahedronGeometry(0.3, 1), armorSteel, [side * 0.62, 1.63, 0], [1.2, 0.86, 0.95], [0, 0, side * -0.22]);
+    armorPiece(vanguard, new THREE.BoxGeometry(0.24, 0.52, 0.32), armorIce, [side * 0.68, 1.14, 0.08], [1, 1, 1], [0, 0, side * -0.15]);
+  }
+  armorPiece(vanguard, new THREE.ConeGeometry(0.29, 0.55, 6), armorSteel, [0, 2.0, 0], [1, 0.88, 1]);
+  armorPiece(vanguard, new THREE.BoxGeometry(0.34, 0.08, 0.12), bladeIce, [0, 1.93, 0.27]);
+  const vRing = armorPiece(vanguard, new THREE.TorusGeometry(0.78, 0.055, 10, 40), bladeIce, [0, 1.02, 0], [1, 1, 1], [Math.PI / 2, 0, 0]);
+  const vSword = new THREE.Group();
+  armorPiece(vSword, new THREE.BoxGeometry(0.16, 1.56, 0.095), bladeIce, [0, 0.75, 0]);
+  armorPiece(vSword, new THREE.ConeGeometry(0.12, 0.3, 4), bladeIce, [0, 1.64, 0], [1, 1, 0.8]);
+  armorPiece(vSword, new THREE.BoxGeometry(0.48, 0.12, 0.16), armorGold, [0, 0.02, 0]);
+  armorPiece(vSword, new THREE.CylinderGeometry(0.07, 0.07, 0.42, 8), armorGold, [0, -0.24, 0]);
+  vSword.position.set(0.78, 0.78, 0.24); vSword.rotation.z = -0.28; vanguard.add(vSword);
+  const shieldShape = new THREE.Shape();
+  shieldShape.moveTo(0, 0.7); shieldShape.lineTo(0.42, 0.47); shieldShape.lineTo(0.36, -0.22);
+  shieldShape.lineTo(0, -0.67); shieldShape.lineTo(-0.36, -0.22); shieldShape.lineTo(-0.42, 0.47); shieldShape.closePath();
+  const shield = new THREE.Mesh(new THREE.ExtrudeGeometry(shieldShape, { depth: 0.12, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 0.04, bevelThickness: 0.04 }), armorIce);
+  shield.position.set(-0.78, 1.05, 0.24); shield.castShadow = true; shield.receiveShadow = true; vanguard.add(shield);
+  armorPiece(vanguard, new THREE.OctahedronGeometry(0.18, 1), bladeIce, [-0.78, 1.08, 0.42], [1, 1.2, 0.6]);
+  heroArmorSets.vanguard = vanguard;
+
+  // PHANTOM — asymmetrical shadow mantle and two spectral blades.
   const phantom = new THREE.Group();
-  const phantomMat = new THREE.MeshBasicMaterial({ color: 0xb878ff, transparent: true, opacity: 0.82, wireframe: true });
+  armorPiece(phantom, new THREE.DodecahedronGeometry(0.48, 1), armorViolet, [0, 1.22, 0], [0.75, 0.9, 0.52]);
+  armorPiece(phantom, new THREE.OctahedronGeometry(0.24, 1), bladeViolet, [0, 1.34, 0.32], [0.8, 1.1, 0.5]);
+  const phantomMat = new THREE.MeshPhysicalMaterial({ color: 0x8c5bc6, metalness: 0.58, roughness: 0.2, emissive: 0x512080, emissiveIntensity: 0.46, transparent: true, opacity: 0.92 });
   for (const side of [-1, 1]) {
-    const fin = new THREE.Mesh(new THREE.ConeGeometry(0.42, 1.55, 4), phantomMat);
-    fin.position.set(side * 0.72, 1.45, 0.12); fin.rotation.z = side * -0.55; fin.rotation.x = Math.PI / 2.7; phantom.add(fin);
+    armorPiece(phantom, new THREE.ConeGeometry(0.34, 1.42, 5), phantomMat, [side * 0.7, 1.52, -0.02], [1, 1, 0.56], [Math.PI / 2.8, 0, side * -0.45]);
+    armorPiece(phantom, new THREE.OctahedronGeometry(0.23, 0), bladeViolet, [side * 0.58, 1.72, 0.1], [1.3, 0.7, 0.65]);
+    const dagger = new THREE.Group();
+    armorPiece(dagger, new THREE.BoxGeometry(0.11, 1.2, 0.08), bladeViolet, [0, 0.6, 0]);
+    armorPiece(dagger, new THREE.ConeGeometry(0.09, 0.28, 4), bladeViolet, [0, 1.31, 0]);
+    armorPiece(dagger, new THREE.BoxGeometry(0.32, 0.09, 0.12), armorViolet, [0, 0.08, 0]);
+    dagger.position.set(side * 0.66, 0.7, 0.38); dagger.rotation.z = side * -0.28; phantom.add(dagger);
   }
-  const phantomHalo = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.045, 6, 24), new THREE.MeshBasicMaterial({ color: 0xd9a7ff, transparent: true, opacity: 0.8 }));
-  phantomHalo.position.y = 2.0; phantomHalo.rotation.x = Math.PI / 2; phantom.add(phantomHalo); heroArmorSets.phantom = phantom;
+  armorPiece(phantom, new THREE.TorusGeometry(0.62, 0.06, 8, 32), bladeViolet, [0, 2.03, 0], [1, 1, 1], [Math.PI / 2, 0, 0]);
+  const mantle = armorPiece(phantom, new THREE.PlaneGeometry(1.05, 1.45, 4, 5), phantomMat, [0, 1.02, -0.42], [1, 1, 1], [0.14, 0, 0]);
+  mantle.material.side = THREE.DoubleSide;
+  heroArmorSets.phantom = phantom;
+
+  // BASTION — heavy shoulder shells, segmented breastplate and a siege maul.
   const bastion = new THREE.Group();
-  const bastionMat = new THREE.MeshBasicMaterial({ color: 0xffb45c, wireframe: false });
+  const heavy = new THREE.MeshPhysicalMaterial({ color: 0x66503f, metalness: 0.88, roughness: 0.32, clearcoat: 0.4 });
+  armorPiece(bastion, new THREE.DodecahedronGeometry(0.72, 1), heavy, [0, 1.25, 0], [1.18, 1.05, 0.92]);
+  armorPiece(bastion, new THREE.OctahedronGeometry(0.34, 1), armorEmber, [0, 1.36, 0.44], [0.9, 0.9, 0.42]);
   for (const side of [-1, 1]) {
-    const pad = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.38, 0.72), bastionMat);
-    pad.position.set(side * 0.72, 1.45, 0); pad.rotation.z = side * -0.12; bastion.add(pad);
+    armorPiece(bastion, new THREE.BoxGeometry(0.82, 0.48, 0.82), armorGold, [side * 0.72, 1.6, -0.02], [1, 1, 1], [0, 0, side * -0.12]);
+    armorPiece(bastion, new THREE.ConeGeometry(0.18, 0.68, 5), armorEmber, [side * 0.85, 1.95, -0.02], [1, 1, 1], [0, 0, side * 0.34]);
+    armorPiece(bastion, new THREE.BoxGeometry(0.3, 0.44, 0.42), heavy, [side * 0.68, 1.02, 0.12]);
   }
-  const bastionCore = new THREE.Mesh(new THREE.OctahedronGeometry(0.48, 0), new THREE.MeshBasicMaterial({ color: 0xffdc9c, wireframe: true }));
-  bastionCore.position.set(0, 1.22, -0.08); bastion.add(bastionCore); heroArmorSets.bastion = bastion;
+  armorPiece(bastion, new THREE.SphereGeometry(0.3, 12, 10), armorGold, [0, 2.0, -0.02], [1.0, 0.8, 1.0]);
+  armorPiece(bastion, new THREE.BoxGeometry(0.4, 0.08, 0.13), armorEmber, [0, 1.98, 0.25]);
+  const maul = new THREE.Group();
+  armorPiece(maul, new THREE.CylinderGeometry(0.07, 0.11, 1.55, 8), armorGold, [0, 0.72, 0]);
+  armorPiece(maul, new THREE.BoxGeometry(0.92, 0.62, 0.56), heavy, [0, 1.65, 0]);
+  armorPiece(maul, new THREE.OctahedronGeometry(0.4, 1), armorEmber, [0, 1.65, 0.12], [1.1, 0.9, 0.42]);
+  for (const side of [-1, 1]) armorPiece(maul, new THREE.ConeGeometry(0.18, 0.34, 5), armorGold, [side * 0.55, 1.65, 0], [1, 1, 1], [0, 0, side * Math.PI / 2]);
+  maul.position.set(0.9, 0.58, 0.25); maul.rotation.z = -0.19; bastion.add(maul);
+  armorPiece(bastion, new THREE.TorusGeometry(0.58, 0.08, 8, 30), armorEmber, [0, 1.02, 0], [1, 1, 1], [Math.PI / 2, 0, 0]);
+  heroArmorSets.bastion = bastion;
+
   Object.values(heroArmorSets).forEach(group => { group.visible = false; heroArmorGroup.add(group); });
 }
+
 function applyHeroVisual(heroId = selectedHero) {
   if (!HERO_CONFIG[heroId]) heroId = 'vanguard';
   selectedHero = heroId;
