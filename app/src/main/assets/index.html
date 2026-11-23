@@ -527,7 +527,7 @@ html,body{font-family:Inter,"Noto Sans Arabic","Segoe UI",Arial,sans-serif;backg
     </div>
     <div class="menu-row">
       <div><label for="setting-graphics">جودة الرسوم</label><small>توازن الأداء والوهج على الهاتف</small></div>
-      <select id="setting-graphics"><option value="low">منخفضة</option><option value="medium" selected>متوسطة</option><option value="high">مرتفعة</option></select>
+      <select id="setting-graphics"><option value="low">اقتصادية · ECO</option><option value="medium">متوازنة · BALANCED</option><option value="high" selected>عالية · HIGH</option><option value="ultra">فائقة · ULTRA</option></select>
     </div>
     <div class="menu-row">
       <div><label for="setting-sensitivity">حساسية الكاميرا</label><small>سرعة دوران الكاميرا باللمس أو الفأرة</small></div>
@@ -622,14 +622,14 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { RGBShiftShader } from 'three/addons/shaders/RGBShiftShader.js';
 
-const DEFAULT_SETTINGS = Object.freeze({ volume: 70, graphics: 'medium', sensitivity: 100, controls: 100, shake: true, invertY: false });
+const DEFAULT_SETTINGS = Object.freeze({ volume: 70, graphics: 'high', sensitivity: 100, controls: 100, shake: true, invertY: false });
 function readRuntimeSettings() {
   try {
     const raw = localStorage.getItem('glyphfall_settings');
     const parsed = raw ? JSON.parse(raw) : {};
     return {
       volume: Math.max(0, Math.min(100, Number(parsed.volume ?? DEFAULT_SETTINGS.volume))),
-      graphics: ['low', 'medium', 'high'].includes(parsed.graphics) ? parsed.graphics : DEFAULT_SETTINGS.graphics,
+      graphics: ['low', 'medium', 'high', 'ultra'].includes(parsed.graphics) ? parsed.graphics : DEFAULT_SETTINGS.graphics,
       sensitivity: Math.max(40, Math.min(180, Number(parsed.sensitivity ?? DEFAULT_SETTINGS.sensitivity))),
       controls: Math.max(80, Math.min(130, Number(parsed.controls ?? DEFAULT_SETTINGS.controls))),
       shake: parsed.shake !== false,
@@ -757,19 +757,32 @@ const glyphMaterial = new THREE.ShaderMaterial({
    [القسم 3] إعداد المشهد والكاميرا والـ Post-Processing
    ============================================================ */
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x071321);
-scene.fog = new THREE.FogExp2(0x071321, 0.0032);
-const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 600);
-const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+scene.background = new THREE.Color(0x081523);
+scene.fog = new THREE.FogExp2(0x0a1a2b, 0.00185);
+const camera = new THREE.PerspectiveCamera(63, window.innerWidth / window.innerHeight, 0.1, 1200);
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance', stencil: false, depth: true });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.18;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
 document.body.appendChild(renderer.domElement);
 
 function updateProjectionScale() {
   const h = renderer.domElement.height, fovRad = THREE.MathUtils.degToRad(camera.fov);
   glyphMaterial.uniforms.uF.value = h / (2 * Math.tan(fovRad / 2)); floorMat.uniforms.uF.value = glyphMaterial.uniforms.uF.value;
 }
-scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+scene.add(new THREE.HemisphereLight(0xa8dfff, 0x182337, 1.25));
+scene.add(new THREE.AmbientLight(0x9cb8c9, 0.38));
+const keySun = new THREE.DirectionalLight(0xffe0bd, 2.6);
+keySun.position.set(-86, 128, -72); keySun.castShadow = true; keySun.shadow.mapSize.set(2048, 2048);
+keySun.shadow.camera.left = -180; keySun.shadow.camera.right = 180; keySun.shadow.camera.top = 180; keySun.shadow.camera.bottom = -180;
+keySun.shadow.camera.near = 1; keySun.shadow.camera.far = 360; keySun.shadow.bias = -0.00018; keySun.shadow.normalBias = 0.035;
+scene.add(keySun);
+const rimSun = new THREE.DirectionalLight(0x55dfff, 1.25); rimSun.position.set(80, 42, 110); scene.add(rimSun);
+const environmentPulseLights = [];
 
 const renderScene = new RenderPass(scene, camera);
 const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.2, 0.4, 0.85);
@@ -1108,6 +1121,23 @@ function applyHeroVisual(heroId = selectedHero) {
   }
   if (typeof coreLight !== 'undefined' && coreLight) coreLight.color.setHex(hero.light);
   Object.entries(heroArmorSets).forEach(([id, group]) => { group.visible = id === heroId; });
+  const showcase = document.querySelector('.hero-showcase');
+  if (showcase) showcase.dataset.class = heroId;
+  const roleMap = { vanguard: 'THE AEGIS · DEFENDER', phantom: 'THE VEIL · ASSASSIN', bastion: 'THE IRON · BREAKER' };
+  const roleMapAr = { vanguard: 'حارس متوازن يقود الصفوف الأمامية ويحمي نفسه ويسيطر على ساحة القتال.', phantom: 'مقاتل سريع يضرب من الزوايا ويكسر إيقاع الخصم.', bastion: 'محطم ثقيل يمتص الضربات ويكسر دفاع الوحوش.' };
+  const detail = {
+    'hero-detail-role': roleMap[heroId], 'hero-detail-name': hero.name, 'hero-detail-summary': roleMapAr[heroId],
+    'hero-detail-weapon': hero.weapon.split(' · ')[1] || hero.weapon,
+    'hero-detail-ability': hero.ability.split(' · ')[1] || hero.ability,
+    'class-number': heroId === 'vanguard' ? '1' : heroId === 'phantom' ? '2' : '3'
+  };
+  Object.entries(detail).forEach(([id, value]) => { const el = document.getElementById(id); if (el) el.textContent = value; });
+  const statValues = { speed: Math.round(hero.speed * 100), power: Math.round(hero.damage * 100), defense: Math.round((2 - hero.incoming) * 100) };
+  Object.entries(statValues).forEach(([key, value]) => {
+    const bar = document.getElementById('hero-' + key + '-bar'), label = document.getElementById('hero-' + key + '-value');
+    if (bar) bar.style.setProperty('--stat-value', Math.max(8, Math.min(100, value)) + '%');
+    if (label) label.textContent = String(value);
+  });
   document.querySelectorAll('.hero-card').forEach(card => card.setAttribute('aria-pressed', String(card.dataset.hero === heroId)));
   const loadout = document.getElementById('hero-loadout');
   if (loadout) loadout.textContent = `${hero.weapon} · ${hero.weaponDetail} | ${hero.ability}`;
@@ -2165,11 +2195,17 @@ document.getElementById('reset-btn').addEventListener('click', e => {
 let settingsReturnTo = 'main', controlsReturnTo = 'main';
 const byId = id => document.getElementById(id);
 function applyGraphicsSettings() {
-  const cap = runtimeSettings.graphics === 'high' ? 1.5 : runtimeSettings.graphics === 'medium' ? 1.0 : 0.75;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, cap));
+  const qualityPresets = {
+    low: { pixelRatio: 0.9, bloom: 0.42, shadows: false, exposure: 1.08 },
+    medium: { pixelRatio: 1.2, bloom: 0.72, shadows: false, exposure: 1.12 },
+    high: { pixelRatio: 1.6, bloom: 1.05, shadows: true, exposure: 1.18 },
+    ultra: { pixelRatio: 2.0, bloom: 1.24, shadows: true, exposure: 1.22 }
+  };
+  const preset = qualityPresets[runtimeSettings.graphics] || qualityPresets.high;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, preset.pixelRatio));
   renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight);
-  bloomPass.strength = runtimeSettings.graphics === 'high' ? 1.25 : runtimeSettings.graphics === 'medium' ? 0.8 : 0.38;
-  bloomPass.radius = runtimeSettings.graphics === 'high' ? 0.45 : 0.25;
+  renderer.shadowMap.enabled = preset.shadows; renderer.toneMappingExposure = preset.exposure;
+  bloomPass.strength = preset.bloom; bloomPass.radius = runtimeSettings.graphics === 'ultra' ? 0.5 : runtimeSettings.graphics === 'high' ? 0.38 : 0.25;
   updateProjectionScale();
 }
 function persistRuntimeSettings() { try { localStorage.setItem('glyphfall_settings', JSON.stringify(runtimeSettings)); } catch (e) {} }
@@ -2266,6 +2302,16 @@ document.documentElement.style.setProperty('--control-scale', String(runtimeSett
 syncSettingsControls();
 applyGraphicsSettings();
 
+function menuPreviewFrame() {
+  if (isReady) return;
+  const now = performance.now() * 0.00012;
+  playerGroup.rotation.y = Math.sin(now) * 0.11;
+  camera.position.set(Math.sin(now * 0.55) * 1.8, 5.3 + Math.sin(now * 0.8) * 0.18, 11.5);
+  camera.lookAt(0, 1.45, 0);
+  composer.render();
+  requestAnimationFrame(menuPreviewFrame);
+}
+requestAnimationFrame(menuPreviewFrame);
 document.getElementById('start-btn').addEventListener('click', () => {
   initAudio();
   try { const lock = window.screen && window.screen.orientation && window.screen.orientation.lock; if (lock) lock.call(window.screen.orientation, 'landscape').catch(() => {}); } catch (e) {}
@@ -2290,9 +2336,7 @@ document.getElementById('start-btn').addEventListener('click', () => {
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); camDist = PT() ? 15.5 : 24.0; baseFov = PT() ? 62 : 64; camera.fov = baseFov;
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  composer.setSize(window.innerWidth, window.innerHeight);
-  updateProjectionScale();
+  applyGraphicsSettings(); updateProjectionScale();
 });
 
 </script>
