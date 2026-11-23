@@ -62,6 +62,7 @@ func _connect_systems() -> void:
     game_ui.pause_requested.connect(_pause_game)
     game_ui.resume_requested.connect(_resume_game)
     game_ui.new_game_requested.connect(_return_to_menu)
+    game_ui.retry_requested.connect(_retry_at_safe_haven)
     player.health_changed.connect(game_ui.update_health)
     player.energy_changed.connect(game_ui.update_energy)
     player.defeated.connect(_on_player_defeated)
@@ -133,6 +134,16 @@ func _on_player_defeated() -> void:
     get_tree().paused = true
     player.set_physics_process(false)
     game_ui.show_game_over()
+
+func _retry_at_safe_haven() -> void:
+    get_tree().paused = false
+    var spawn := Vector3(0.0, world.terrain_height(0.0, 6.0) + 0.2, 6.0)
+    player.reset_at_spawn(spawn)
+    _playing = true
+    player.set_physics_process(true)
+    encounters.set_process(true)
+    game_ui.show_hud()
+    game_ui.update_hud(player.shards, "SAFE HAVEN  •  الملاذ الآمن", "عد إلى تجهيزاتك ثم استكشف البراري.")
 
 func _process(delta: float) -> void:
     if not _playing:
