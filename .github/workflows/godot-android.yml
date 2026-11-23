@@ -84,11 +84,11 @@ jobs:
           echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android" >> "$GITHUB_ENV"
 
       - name: Import native project
-        run: godot --headless --editor --path native --quit
+        run: timeout 180s godot --headless --editor --path native --quit
 
       - name: Run native world and combat tests
         run: |
-          godot --headless --path native --script res://tests/test_world_rules.gd
+          timeout 90s godot --headless --path native --script res://tests/test_world_rules.gd
           godot --headless --path native --script res://tests/test_combat_rules.gd
           godot --headless --path native --script res://tests/test_world_builder.gd
 
@@ -103,7 +103,7 @@ jobs:
       - name: Export native Android APK
         run: |
           mkdir -p native/build
-          godot --headless --path native --export-debug "Android" build/GLYPHFALL-Android.apk
+          timeout 300s godot --headless --path native --export-debug "Android" build/GLYPHFALL-Android.apk
 
       - name: Validate exported APK
         run: |
