@@ -25,7 +25,7 @@ func configure(target: PlayerController, center: Vector3, radius: float, spawn_p
     site_center = center
     site_radius = radius
     home_position = spawn_position
-    global_position = spawn_position
+    position = spawn_position
     enemy_type = variant if ["sentinel", "wraith", "brute"].has(variant) else "sentinel"
     if enemy_type == "brute":
         max_health = 155.0

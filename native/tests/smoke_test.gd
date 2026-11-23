@@ -11,6 +11,12 @@ func _initialize() -> void:
     assert(instance.has_node("Player"), "Player must be composed")
     assert(instance.has_node("EncounterManager"), "EncounterManager must be composed")
     assert(instance.has_node("GameUI"), "GameUI must be composed")
+    var encounter_node: Node = instance.get_node("EncounterManager")
+    assert(encounter_node.get_child_count() == 15, "Both encounter sites must spawn 15 hostiles")
+    for enemy in encounter_node.get_children():
+        assert(enemy.is_inside_tree(), "Spawned enemy must be inside the scene tree")
+        assert(enemy.is_in_group("hostiles"), "Spawned enemy must register as hostile")
+        assert(enemy.global_position.distance_to(enemy.home_position) < 0.01, "Spawned enemy must retain its authored home position")
     var ui_node: Node = instance.get_node("GameUI")
     assert(ui_node.has_method("get_visual_contract"), "GameUI visual contract must load")
     var required_scripts := [
