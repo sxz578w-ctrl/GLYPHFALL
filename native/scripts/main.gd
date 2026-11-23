@@ -41,8 +41,7 @@ func _create_player() -> void:
     player = PlayerControllerScript.new()
     player.name = "Player"
     add_child(player)
-    var spawn := Vector3(0.0, world.terrain_height(0.0, 6.0) + 0.2, 6.0)
-    player.global_position = spawn
+    player.global_position = Vector3(0.0, world.terrain_height(0.0, 6.0) + 0.2, 6.0)
 
 func _create_encounters() -> void:
     encounters = EncounterManagerScript.new()
@@ -67,10 +66,10 @@ func _connect_systems() -> void:
     game_ui.retry_requested.connect(_retry_at_safe_haven)
     game_ui.purchase_requested.connect(_on_keeper_purchase)
     game_ui.merchant_closed.connect(_close_keeper)
-    encounters.shards_awarded.connect(_on_shards_awarded)
     player.health_changed.connect(game_ui.update_health)
     player.energy_changed.connect(game_ui.update_energy)
     player.defeated.connect(_on_player_defeated)
+    encounters.shards_awarded.connect(_on_shards_awarded)
 
 func _start_game() -> void:
     get_tree().paused = false
@@ -102,6 +101,15 @@ func _return_to_menu() -> void:
     game_ui.show_menu()
     _persist_save()
 
+func _retry_at_safe_haven() -> void:
+    get_tree().paused = false
+    player.reset_at_spawn(Vector3(0.0, world.terrain_height(0.0, 6.0) + 0.2, 6.0))
+    _playing = true
+    player.set_physics_process(true)
+    encounters.set_process(true)
+    game_ui.show_hud()
+    game_ui.notify_event("تمت إعادتك إلى الملاذ الآمن.")
+
 func _on_class_selected(class_id: String) -> void:
     player.select_class(class_id)
     save_data["selected_class"] = class_id
@@ -129,9 +137,61 @@ func _on_action_requested(action_id: String) -> void:
             if WorldRules.is_safe_haven(player.global_position):
                 player.restore_health(24.0)
                 player.restore_energy(28.0)
-                game_ui.set_status("تم ترميم طاقتك داخل الملاذ الآمن.")
+                game_ui.notify_event("تم ترميم طاقتك داخل الملاذ الآمن.")
             else:
-                game_ui.set_status("اقترب من أثر قابل للترميم لإعادة بناء المنطقة.")
+                game_ui.notify_event("اقترب من أثر قابل للترميم لإعادة بناء المنطقة.")
+
+func _on_keeper_purchase(item_id: String) -> void:
+    var costs: Dictionary = {
+        "health": 10,
+        "energy": 8,
+        "damage": 45,
+        "vitality": 40
+    }
+    var cost := int(costs.get(item_id, 999999))
+    if player.shards < cost:
+        game_ui.notify_event("لا توجد شظايا كافية  •  INSUFFICIENT SHARDS")
+        return
+
+    match item_id:
+        "health":
+            if player.health >= player.max_health:
+                game_ui.notify_event("الصحة ممتلئة بالفعل.")
+                return
+            player.shards -= cost
+            player.restore_health(65.0)
+        "energy":
+            if player.energy >= player.max_energy:
+                game_ui.notify_event("الطاقة ممتلئة بالفعل.")
+                return
+            player.shards -= cost
+            player.restore_energy(65.0)
+        "damage":
+            if not player.purchase_upgrade("damage"):
+                game_ui.notify_event("وصلت ترقية السلاح إلى الحد الأقصى.")
+                return
+            player.shards -= cost
+        "vitality":
+            if not player.purchase_upgrade("vitality"):
+                game_ui.notify_event("وصلت ترقية الحيوية إلى الحد الأقصى.")
+                return
+            player.shards -= cost
+        _:
+            return
+
+    game_ui.update_keeper_shards(player.shards)
+    game_ui.update_hud(player.shards, "SAFE HAVEN  •  الملاذ الآمن", "تم الشراء. يمكنك متابعة الاستكشاف.")
+    game_ui.notify_event("تم تنفيذ عملية الشراء بنجاح.")
+    _persist_save()
+
+func _close_keeper() -> void:
+    get_tree().paused = false
+
+func _on_shards_awarded(amount: int) -> void:
+    player.shards += amount
+    game_ui.update_hud(player.shards, _current_zone_title(), "اجمع الشظايا وطوّر سلاحك من الملاذ الآمن.")
+    game_ui.notify_event("+%d SHARDS  •  تم جمع الشظايا" % amount)
+    _persist_save()
 
 func _on_player_defeated() -> void:
     if not _playing:
@@ -141,15 +201,15 @@ func _on_player_defeated() -> void:
     player.set_physics_process(false)
     game_ui.show_game_over()
 
-func _retry_at_safe_haven() -> void:
-    get_tree().paused = false
-    var spawn := Vector3(0.0, world.terrain_height(0.0, 6.0) + 0.2, 6.0)
-    player.reset_at_spawn(spawn)
-    _playing = true
-    player.set_physics_process(true)
-    encounters.set_process(true)
-    game_ui.show_hud()
-    game_ui.update_hud(player.shards, "SAFE HAVEN  •  الملاذ الآمن", "عد إلى تجهيزاتك ثم استكشف البراري.")
+func _current_zone_title() -> String:
+    if WorldRules.is_safe_haven(player.global_position):
+        return "SAFE HAVEN  •  الملاذ الآمن"
+    var site_id := encounters.get_current_site_id()
+    if site_id == "mirkwood":
+        return "MIRKWOOD WILDS  •  غابة الظلال"
+    if site_id == "sunken_grove":
+        return "SUNKEN GROVE  •  البستان الغارق"
+    return "THE OUTSKIRTS  •  البراري"
 
 func _process(delta: float) -> void:
     if not _playing:
@@ -160,21 +220,14 @@ func _process(delta: float) -> void:
         _refresh_hud()
 
 func _refresh_hud() -> void:
-    var zone_name := "SAFE HAVEN  •  الملاذ الآمن"
+    var zone_name := _current_zone_title()
     var objective := "تحدّث مع الحارس وجهّز أسلحتك قبل الرحيل."
-    if WorldRules.is_safe_haven(player.global_position):
-        zone_name = "SAFE HAVEN  •  الملاذ الآمن"
-    else:
-        var site_id := encounters.get_current_site_id()
-        if site_id == "mirkwood":
-            zone_name = "MIRKWOOD WILDS  •  غابة الظلال"
-            objective = "استكشف الغابة وواجه الحراس داخل نطاقها."
-        elif site_id == "sunken_grove":
-            zone_name = "SUNKEN GROVE  •  البستان الغارق"
-            objective = "عطّل الشذوذ واستعد البلورة القديمة."
-        else:
-            zone_name = "THE OUTSKIRTS  •  البراري"
-            objective = "استكشف أطراف العالم وابحث عن مواقع المراسي."
+    if zone_name.begins_with("MIRKWOOD"):
+        objective = "استكشف الغابة وواجه الحراس داخل نطاقها."
+    elif zone_name.begins_with("SUNKEN"):
+        objective = "عطّل الشذوذ واستعد البلورة القديمة."
+    elif zone_name.begins_with("THE OUTSKIRTS"):
+        objective = "استكشف أطراف العالم وابحث عن مواقع المراسي."
     game_ui.update_hud(player.shards, zone_name, objective)
 
 func _apply_quality(quality: String) -> void:
@@ -193,10 +246,12 @@ func _apply_quality(quality: String) -> void:
     _persist_save()
 
 func _persist_save() -> void:
-    save_data["selected_class"] = player.class_id if player != null else "vanguard"
-    save_data["shards"] = player.shards if player != null else 0
-    save_data["damage_rank"] = player.damage_rank if player != null else 0
-    save_data["vitality_rank"] = player.vitality_rank if player != null else 0
+    if player == null:
+        return
+    save_data["selected_class"] = player.class_id
+    save_data["shards"] = player.shards
+    save_data["damage_rank"] = player.damage_rank
+    save_data["vitality_rank"] = player.vitality_rank
     SaveServiceScript.write_save(save_data)
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -204,7 +259,7 @@ func _unhandled_input(event: InputEvent) -> void:
         if event.keycode == KEY_ESCAPE or event.keycode == KEY_P:
             if _playing and not get_tree().paused:
                 _pause_game()
-            elif get_tree().paused:
+            elif get_tree().paused and _playing:
                 _resume_game()
         elif event.keycode == KEY_J and _playing:
             player.attack_light()
@@ -214,67 +269,3 @@ func _unhandled_input(event: InputEvent) -> void:
             player.use_class_skill()
         elif event.keycode == KEY_SHIFT and _playing:
             player.dodge()
- 
-func _on_shards_awarded(amount: int) -> void:
-    player.shards += amount
-    game_ui.update_hud(player.shards, _current_zone_title(), "اجمع الشظايا وطوّر سلاحك من الملاذ الآمن.")
-    game_ui.notify_event("+%d SHARDS  •  تم جمع الشظايا" % amount)
-    if get_tree().paused:
-        game_ui.update_keeper_shards(player.shards)
-    _persist_save()
-
-func _on_keeper_purchase(item_id: String) -> void:
-    var costs := {
-        "health": 10,
-        "energy": 8,
-        "damage": 45,
-        "vitality": 40
-    }
-    var cost := int(costs.get(item_id, 999999))
-    if player.shards < cost:
-        game_ui.notify_event("لا توجد شظايا كافية  •  INSUFFICIENT SHARDS")
-        return
-    var purchased := true
-    match item_id:
-        "health":
-            player.shards -= cost
-            player.restore_health(65.0)
-        "energy":
-            player.shards -= cost
-            player.restore_energy(65.0)
-        "damage":
-            purchased = player.purchase_upgrade("damage")
-            if purchased:
-                player.shards -= cost
-        "vitality":
-            purchased = player.purchase_upgrade("vitality")
-            if purchased:
-                player.shards -= cost
-        _:
-            purchased = false
-    if not purchased:
-        game_ui.notify_event("وصلت هذه الترقية إلى الحد الأقصى.")
-        return
-    game_ui.update_keeper_shards(player.shards)
-    game_ui.update_hud(player.shards, "SAFE HAVEN  •  الملاذ الآمن", "تم الشراء. يمكنك متابعة الاستكشاف.")
-    game_ui.notify_event("تم تنفيذ عملية الشراء بنجاح.")
-    _persist_save()
-
-func _close_keeper() -> void:
-    get_tree().paused = false
-
-func _on_shards_awarded(amount: int) -> void:
-    player.shards += amount
-    game_ui.update_hud(player.shards, _current_zone_title(), "اجمع الشظايا وطوّر سلاحك من الملاذ الآمن.")
-    game_ui.notify_event("+%d SHARDS  •  تم جمع الشظايا" % amount)
-    _persist_save()
-
-func _current_zone_title() -> String:
-    if WorldRules.is_safe_haven(player.global_position):
-        return "SAFE HAVEN  •  الملاذ الآمن"
-    var site_id := encounters.get_current_site_id()
-    if site_id == "mirkwood":
-        return "MIRKWOOD WILDS  •  غابة الظلال"
-    if site_id == "sunken_grove":
-        return "SUNKEN GROVE  •  البستان الغارق"
-    return "THE OUTSKIRTS  •  البراري"
