@@ -190,14 +190,10 @@ func _add_water_plane(position: Vector3, dimensions: Vector2, yaw: float) -> voi
     water.mesh = plane
     water.position = position
     water.rotation.y = yaw
-    var material := StandardMaterial3D.new()
-    material.albedo_color = Color(0.035, 0.19, 0.28, 0.86)
-    material.metallic = 0.68
-    material.roughness = 0.16
-    material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-    material.emission_enabled = true
-    material.emission = Color(0.015, 0.12, 0.2)
-    material.emission_energy_multiplier = 0.42
+    var material := ShaderMaterial.new()
+    material.shader = load("res://shaders/water.gdshader")
+    material.set_shader_parameter("water_color", Color(0.025, 0.22, 0.34, 0.82))
+    material.set_shader_parameter("crest_color", Color(0.10, 0.65, 0.95, 0.5))
     water.material_override = material
     water.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
     add_child(water)
