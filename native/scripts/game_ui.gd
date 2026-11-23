@@ -16,6 +16,7 @@ signal merchant_closed
 const WorldRules = preload("res://scripts/world_rules.gd")
 const VirtualJoystickScript = preload("res://scripts/virtual_joystick.gd")
 
+const MENU_ART_PATH: String = "res://assets/main_keyart.svg"
 const CLASS_ORDER: PackedStringArray = ["vanguard", "phantom", "bastion"]
 const CLASS_ICON_PATHS: Dictionary = {
     "vanguard": "res://assets/icons/hero-vanguard.svg",
@@ -67,9 +68,7 @@ func _ready() -> void:
     _build_pause_panel()
     _build_settings_panel()
     show_menu()
-    _menu_root.modulate.a = 0.0
-    var intro_tween := create_tween()
-    intro_tween.tween_property(_menu_root, "modulate:a", 1.0, 0.85)
+    _play_intro_sequence()
 
 func show_menu() -> void:
     _menu_root.visible = true
@@ -166,6 +165,69 @@ func close_keeper() -> void:
         _keeper_panel.visible = false
     merchant_closed.emit()
 
+
+func get_visual_contract() -> Dictionary:
+    return {
+        "class_count": _class_buttons.size(),
+        "roster_mode": "single_screen",
+        "menu_art": MENU_ART_PATH,
+        "intro_animation": true,
+        "action_icon_count": ICON_PATHS.size()
+    }
+
+func _play_intro_sequence() -> void:
+    _menu_root.modulate.a = 0.0
+    var menu_tween := create_tween()
+    menu_tween.tween_property(_menu_root, "modulate:a", 1.0, 0.78)
+
+    var intro := Control.new()
+    intro.name = "EclipseIntro"
+    intro.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    intro.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    intro.modulate.a = 0.0
+    _menu_root.add_child(intro)
+
+    var veil := ColorRect.new()
+    veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    veil.color = Color(0.006, 0.012, 0.028, 0.62)
+    veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    intro.add_child(veil)
+
+    var center := CenterContainer.new()
+    center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    intro.add_child(center)
+
+    var column := VBoxContainer.new()
+    column.alignment = BoxContainer.ALIGNMENT_CENTER
+    column.add_theme_constant_override("separation", 7)
+    column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    center.add_child(column)
+
+    var sigil := TextureRect.new()
+    sigil.custom_minimum_size = Vector2(92.0, 92.0)
+    sigil.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    sigil.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    sigil.texture = load("res://assets/icon.svg")
+    sigil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    column.add_child(sigil)
+    var title := _label("GLYPHFALL", 31, Color(0.91, 0.98, 1.0))
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    column.add_child(title)
+    var subtitle := _label("THE BROKEN WORLD  •  ECLIPSE FRONTIER", 10, Color(0.48, 0.82, 1.0))
+    subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    column.add_child(subtitle)
+    var progress := _progress_bar(Color(0.18, 0.74, 1.0))
+    progress.custom_minimum_size = Vector2(240.0, 5.0)
+    progress.value = 100.0
+    column.add_child(progress)
+
+    var intro_tween := create_tween()
+    intro_tween.tween_property(intro, "modulate:a", 1.0, 0.34)
+    intro_tween.tween_interval(0.72)
+    intro_tween.tween_property(intro, "modulate:a", 0.0, 0.48)
+    intro_tween.tween_callback(intro.queue_free)
+
 func _build_main_menu() -> void:
     _menu_root = Control.new()
     _menu_root.name = "MainMenu"
@@ -177,8 +239,8 @@ func _build_main_menu() -> void:
     background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-    if ResourceLoader.exists("res://assets/main_keyart.svg"):
-        background.texture = load("res://assets/main_keyart.svg")
+    background.texture = load(MENU_ART_PATH) if ResourceLoader.exists(MENU_ART_PATH) else null
+    background.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
     _menu_root.add_child(background)
 
     var overlay := ColorRect.new()
@@ -194,10 +256,10 @@ func _build_main_menu() -> void:
 
     var root_margin := MarginContainer.new()
     root_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    root_margin.add_theme_constant_override("margin_left", 30)
-    root_margin.add_theme_constant_override("margin_right", 30)
-    root_margin.add_theme_constant_override("margin_top", 20)
-    root_margin.add_theme_constant_override("margin_bottom", 22)
+    root_margin.add_theme_constant_override("margin_left", 26)
+    root_margin.add_theme_constant_override("margin_right", 26)
+    root_margin.add_theme_constant_override("margin_top", 16)
+    root_margin.add_theme_constant_override("margin_bottom", 18)
     _menu_root.add_child(root_margin)
 
     var page := VBoxContainer.new()
@@ -257,7 +319,7 @@ func _build_top_bar() -> Control:
 
 func _build_navigation_panel() -> Control:
     var panel := _glass_panel()
-    panel.custom_minimum_size.x = 225
+    panel.custom_minimum_size.x = 198
     var column := VBoxContainer.new()
     column.add_theme_constant_override("separation", 10)
     panel.add_child(column)
@@ -294,16 +356,17 @@ func _build_class_detail_panel() -> Control:
     var hero_heading := HBoxContainer.new()
     hero_heading.add_theme_constant_override("separation", 18)
     _class_art = TextureRect.new()
-    _class_art.custom_minimum_size = Vector2(108.0, 108.0)
+    _class_art.custom_minimum_size = Vector2(156.0, 156.0)
     _class_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     _class_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     hero_heading.add_child(_class_art)
     var hero_intro := VBoxContainer.new()
     hero_intro.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    _class_title = _label("VANGUARD  •  الحارس", 29, Color(0.92, 0.97, 1.0))
+    _class_title = _label("VANGUARD  •  الحارس", 34, Color(0.94, 0.98, 1.0))
     hero_intro.add_child(_class_title)
     _class_description = _label("", 12, Color(0.73, 0.83, 0.94))
     _class_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    _class_description.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.7))
     hero_intro.add_child(_class_description)
     hero_heading.add_child(hero_intro)
     column.add_child(hero_heading)
@@ -351,7 +414,7 @@ func _build_class_detail_panel() -> Control:
 
 func _build_roster_panel() -> Control:
     var panel := _glass_panel()
-    panel.custom_minimum_size.x = 300
+    panel.custom_minimum_size.x = 338
     var column := VBoxContainer.new()
     column.add_theme_constant_override("separation", 10)
     panel.add_child(column)
@@ -363,7 +426,7 @@ func _build_roster_panel() -> Control:
     for class_id in CLASS_ORDER:
         var profile := WorldRules.class_profile(class_id)
         var card := Button.new()
-        card.custom_minimum_size.y = 82
+        card.custom_minimum_size.y = 96
         card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         card.text = ""
         card.focus_mode = Control.FOCUS_ALL
@@ -374,7 +437,7 @@ func _build_roster_panel() -> Control:
         card_row.add_theme_constant_override("separation", 12)
         card.add_child(card_row)
         var emblem := TextureRect.new()
-        emblem.custom_minimum_size = Vector2(54.0, 54.0)
+        emblem.custom_minimum_size = Vector2(68.0, 68.0)
         emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
         emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
         emblem.texture = load(str(CLASS_ICON_PATHS[class_id]))
@@ -383,7 +446,8 @@ func _build_roster_panel() -> Control:
         text_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         text_column.add_child(_label(str(profile["title"]), 14, Color(0.92, 0.97, 1.0)))
         text_column.add_child(_label(str(profile["name"]), 12, profile["accent"]))
-        text_column.add_child(_label(str(profile["role"]).to_upper() + "  •  " + str(profile["weapon"]), 8, Color(0.59, 0.72, 0.84)))
+        text_column.add_child(_label(str(profile["role"]).to_upper() + "  •  " + str(profile["weapon"]), 9, Color(0.72, 0.83, 0.94)))
+        text_column.add_child(_label(str(profile["ability"]), 8, profile["accent"]))
         card_row.add_child(text_column)
         card.pressed.connect(_select_class.bind(class_id))
         column.add_child(card)
@@ -583,8 +647,8 @@ func _build_settings_panel() -> void:
     _settings_panel.add_child(column)
     column.add_child(_label("GRAPHICS PRESET  •  جودة الرسوم", 21, Color(0.92, 0.97, 1.0)))
     column.add_child(_label("يتكيف الأداء مع قدرة الهاتف وحرارته.", 11, Color(0.68, 0.8, 0.93)))
-    for quality in ["performance", "balanced", "high"]:
-        var label_text := "الأداء  /  PERFORMANCE" if quality == "performance" else "متوازن  /  BALANCED" if quality == "balanced" else "مرتفع  /  HIGH"
+    for quality in ["performance", "balanced", "high", "ultra"]:
+        var label_text := "الأداء  /  PERFORMANCE" if quality == "performance" else "متوازن  /  BALANCED" if quality == "balanced" else "مرتفع  /  HIGH" if quality == "high" else "سينمائي  /  ULTRA"
         var button := _button(label_text, Color(0.22, 0.7, 0.94), quality == current_quality)
         button.pressed.connect(_set_quality.bind(quality))
         column.add_child(button)
@@ -627,7 +691,14 @@ func _update_class_details() -> void:
     _class_description.text = str(profile["description"])
     for class_id in _class_buttons:
         var button: Button = _class_buttons[class_id]
-        button.modulate = Color.WHITE if class_id == selected_class else Color(0.72, 0.8, 0.92)
+        var active := class_id == selected_class
+        button.modulate = Color.WHITE if active else Color(0.72, 0.8, 0.92)
+        var accent: Color = WorldRules.class_profile(class_id)["accent"]
+        button.add_theme_stylebox_override("normal", _panel_style(
+            Color(0.06, 0.12, 0.19, 0.97) if active else Color(0.025, 0.05, 0.09, 0.92),
+            accent if active else Color(0.18, 0.34, 0.48, 0.58),
+            12
+        ))
     for child in _class_stats.get_children():
         child.queue_free()
     _add_stat_row("HEALTH", float(profile["health"]) / 200.0, Color(0.94, 0.29, 0.39))
@@ -780,6 +851,8 @@ func _panel_style(background: Color, border: Color, radius: int) -> StyleBoxFlat
     style.border_color = border
     style.set_border_width_all(1)
     style.set_corner_radius_all(radius)
+    style.shadow_color = Color(0.0, 0.0, 0.0, 0.44)
+    style.shadow_size = 10
     style.content_margin_left = 10
     style.content_margin_right = 10
     style.content_margin_top = 8
