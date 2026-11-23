@@ -18,6 +18,7 @@ var move_speed: float = 3.6
 var attack_cooldown: float = 0.0
 var state: State = State.DORMANT
 var enemy_type: String = "sentinel"
+var _pending_spawn_position := Vector3.ZERO
 var _visual: MeshInstance3D
 
 func configure(target: PlayerController, center: Vector3, radius: float, spawn_position: Vector3, tint: Color, variant: String = "sentinel") -> void:
@@ -25,7 +26,7 @@ func configure(target: PlayerController, center: Vector3, radius: float, spawn_p
     site_center = center
     site_radius = radius
     home_position = spawn_position
-    position = spawn_position
+    _pending_spawn_position = spawn_position
     enemy_type = variant if ["sentinel", "wraith", "brute"].has(variant) else "sentinel"
     if enemy_type == "brute":
         max_health = 155.0
@@ -38,6 +39,7 @@ func configure(target: PlayerController, center: Vector3, radius: float, spawn_p
     _create_visual(tint)
 
 func _ready() -> void:
+    global_position = _pending_spawn_position
     add_to_group("hostiles")
     var collision := CollisionShape3D.new()
     var shape := CapsuleShape3D.new()
