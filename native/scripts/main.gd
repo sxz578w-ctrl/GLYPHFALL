@@ -22,12 +22,12 @@ func _ready() -> void:
     _create_encounters()
     _create_ui()
     _connect_systems()
-    _apply_quality(str(save_data["quality"]))
     player.damage_rank = int(save_data["damage_rank"])
     player.vitality_rank = int(save_data["vitality_rank"])
-    player.select_class(str(save_data["selected_class"]))
-    game_ui.set_selected_class(str(save_data["selected_class"]))
     player.shards = int(save_data["shards"])
+    player.select_class(str(save_data["selected_class"]))
+    _apply_quality(str(save_data["quality"]))
+    game_ui.set_selected_class(str(save_data["selected_class"]))
     player.set_physics_process(false)
     encounters.set_process(false)
     game_ui.show_menu()
@@ -59,7 +59,7 @@ func _connect_systems() -> void:
     game_ui.class_selected.connect(_on_class_selected)
     game_ui.action_requested.connect(_on_action_requested)
     game_ui.movement_changed.connect(player.set_mobile_move)
-    game_ui.quality_changed.connect(_apply_quality)
+    game_ui.quality_changed.connect(_on_quality_changed)
     game_ui.pause_requested.connect(_pause_game)
     game_ui.resume_requested.connect(_resume_game)
     game_ui.new_game_requested.connect(_return_to_menu)
@@ -253,6 +253,10 @@ func _persist_save() -> void:
     save_data["damage_rank"] = player.damage_rank
     save_data["vitality_rank"] = player.vitality_rank
     SaveServiceScript.write_save(save_data)
+
+func _on_quality_changed(quality: String) -> void:
+    _apply_quality(quality)
+    _persist_save()
 
 func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and not event.echo:
