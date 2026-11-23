@@ -1,0 +1,120 @@
+name: GLYPHFALL Native Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'native/**'
+      - 'README.md'
+      - '.github/workflows/godot-android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: glyphfall-native-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Test and export native Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android build dependencies
+        run: |
+          sdkmanager --sdk_root="$ANDROID_HOME" \
+            "platform-tools" \
+            "build-tools;35.0.1" \
+            "platforms;android-35" \
+            "cmdline-tools;latest" \
+            "cmake;3.10.2.4988404" \
+            "ndk;28.1.13356709"
+
+      - name: Download Godot 4.7.2 Stable editor
+        run: |
+          curl -fL --retry 3 "https://downloads.godotengine.org/?flavor=stable&platform=linux.64&slug=linux.x86_64.zip&version=4.7.2" -o /tmp/godot-editor.zip
+          unzip -q /tmp/godot-editor.zip -d /tmp/godot-editor
+          chmod +x /tmp/godot-editor/Godot_v4.7.2-stable_linux.x86_64
+          sudo ln -sf /tmp/godot-editor/Godot_v4.7.2-stable_linux.x86_64 /usr/local/bin/godot
+          godot --version
+
+      - name: Install matching Android export templates
+        run: |
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.7.2.stable"
+          curl -fL --retry 3 "https://downloads.godotengine.org/?flavor=stable&platform=templates&slug=export_templates.tpz&version=4.7.2" -o /tmp/godot-templates.tpz
+          mkdir -p /tmp/godot-templates
+          unzip -q /tmp/godot-templates.tpz -d /tmp/godot-templates
+          if [ -d /tmp/godot-templates/templates ]; then
+            cp -a /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/4.7.2.stable/"
+          else
+            cp -a /tmp/godot-templates/. "$HOME/.local/share/godot/export_templates/4.7.2.stable/"
+          fi
+          test -s "$HOME/.local/share/godot/export_templates/4.7.2.stable/android_debug.apk"
+
+      - name: Configure Godot Android SDK and JDK paths
+        run: |
+          mkdir -p "$HOME/.config/godot" "$HOME/.android"
+          cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
+          [gd_resource type="EditorSettings" format=3]
+          [resource]
+          export/android/android_sdk_path = "$ANDROID_HOME"
+          export/android/java_sdk_path = "$JAVA_HOME"
+          EOF
+          keytool -genkeypair -v \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android -alias androiddebugkey -keypass android \
+            -dname "CN=Android Debug,O=Android,C=US" \
+            -validity 10000 -keyalg RSA -keysize 2048
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$HOME/.android/debug.keystore" >> "$GITHUB_ENV"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey" >> "$GITHUB_ENV"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android" >> "$GITHUB_ENV"
+
+      - name: Import native project
+        run: godot --headless --editor --path native --quit
+
+      - name: Run native world and combat tests
+        run: |
+          godot --headless --path native --script res://tests/test_world_rules.gd
+          godot --headless --path native --script res://tests/test_combat_rules.gd
+          godot --headless --path native --script res://tests/test_world_builder.gd
+
+      - name: Run save and UI tests
+        run: |
+          godot --headless --path native --script res://tests/test_save_service.gd
+          godot --headless --path native --script res://tests/test_ui_contract.gd
+
+      - name: Run main scene smoke test
+        run: godot --headless --path native --script res://tests/smoke_test.gd
+
+      - name: Export native Android APK
+        run: |
+          mkdir -p native/build
+          godot --headless --path native --export-debug "Android" build/GLYPHFALL-Android.apk
+
+      - name: Validate exported APK
+        run: |
+          test -s native/build/GLYPHFALL-Android.apk
+          unzip -t native/build/GLYPHFALL-Android.apk
+          "$ANDROID_HOME/build-tools/35.0.1/aapt" dump badging native/build/GLYPHFALL-Android.apk | grep "package: name='com.glyphfall.game'"
+
+      - name: Upload native APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GLYPHFALL-NATIVE-ANDROID-APK
+          path: native/build/GLYPHFALL-Android.apk
+          if-no-files-found: error
+          retention-days: 30
