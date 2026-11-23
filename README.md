@@ -1,47 +1,55 @@
 # GLYPHFALL — The Broken World
 
-Arabic-first 3D survival-action game prototype packaged for Android in landscape orientation.
+Android-first third-person survival-action RPG set in a fractured world of ancient ruins, anomaly forests, and safe havens.
 
-## Included in this repository
+## Active engine
 
-- The complete current landscape HTML/Three.js prototype under `app/src/main/assets/index.html`.
-- Android Java WebView host with immersive full-screen presentation.
-- Local asset delivery through AndroidX `WebViewAssetLoader` using the secure `https://appassets.androidplatform.net` origin.
-- JavaScript and DOM storage for the game's current controls, settings and local progress data.
-- Landscape-only Android activity, game icon, and lifecycle/back-button integration.
-- Automated source verification and encounter-zone/melee regression tests.
-- GitHub Actions workflow that builds and publishes a debug APK artifact on every push to `main`.
+The active visual/gameplay foundation is **Godot 4.7.2 Stable**, GDScript, and the Mobile renderer. The earlier Three.js/WebView prototype remains under `app/` as a fallback while native parity is developed.
 
-## Build locally
+## Native project
 
-Use JDK 17, Android SDK Platform 36, and Gradle 9.6.0:
+Open `native/project.godot` with Godot 4.7.2 Stable.
+
+- Landscape-first, Arabic-first UI.
+- Main roster screen with VANGUARD, PHANTOM, and BASTION.
+- Third-person player controller and signature melee weapons.
+- SAFE HAVEN settlement, outskirts, Mirkwood, Sunken Grove, and bounded encounter sites.
+- Enemy AI is site-bound; enemies do not pursue outside their owning encounter radius.
+- Versioned local settings/progression save.
+- Touch joystick, attack, heavy strike, guard, dodge, skill, interact, rebuild, and pause controls.
+- Scalable SVG scene art, class emblems, combat iconography, and app identity.
+- Performance, Balanced, and High graphics presets; adaptive 3D render scale.
+
+## Native Android APK
+
+The workflow `.github/workflows/godot-android.yml` downloads the matching Godot 4.7.2 Stable editor and export templates, installs JDK 17 and Android SDK dependencies, runs headless tests, exports the APK, verifies the package ID, and uploads the `GLYPHFALL-NATIVE-ANDROID-APK` artifact.
+
+A push to `main` that changes `native/**` starts the build automatically. The latest APK is downloaded from the successful GitHub Actions run.
+
+## Local build requirements
+
+- Godot 4.7.2 Stable (standard build, not .NET)
+- OpenJDK 17
+- Android SDK Platform 35, Build Tools 35.0.1, Platform Tools, NDK 28.1.13356709, CMake 3.10.2.4988404
+- Matching Godot 4.7.2 export templates
+
+Export preset: `Android`
 
 ```bash
-node scripts/verify-game.cjs
-node tests/encounter-zones.test.cjs
-node tests/android-shell.test.cjs
-gradle --no-daemon :app:assembleDebug
+godot --headless --editor --path native --quit
+godot --headless --path native --script res://tests/test_world_rules.gd
+godot --headless --path native --script res://tests/test_combat_rules.gd
+godot --headless --path native --script res://tests/test_save_service.gd
+godot --headless --path native --script res://tests/test_world_builder.gd
+godot --headless --path native --script res://tests/test_ui_contract.gd
+godot --headless --path native --script res://tests/smoke_test.gd
+godot --headless --path native --export-debug Android build/GLYPHFALL-Android.apk
 ```
 
-APK output:
+## Scope and quality statement
 
-`app/build/outputs/apk/debug/app-debug.apk`
+This is a native, playable vertical slice and a scalable foundation, not a finished commercial AAA release. It uses procedural/primitive 3D geometry and custom vector art; it does not yet contain a full authored campaign, production character rigging, motion-captured animation, voice acting, multiplayer, or a large professionally authored asset library. These are separate production milestones. Device testing is required before public release.
 
-## Build on GitHub
+## Legacy fallback
 
-Push to `main` or run **Actions → Build GLYPHFALL Android APK → Run workflow**. Download the `GLYPHFALL-Android-APK` artifact from the completed workflow run.
-
-## Runtime note
-
-The HTML scene is bundled locally, but Three.js 0.160.0 and its official example modules are loaded from the pinned jsDelivr CDN URL in the import map. The first launch and 3D runtime therefore require internet access. No user account, paid API, or in-app purchase SDK is required by this Android shell.
-
-## Project status and scope
-
-This is an installable Android build of the current playable prototype, not a claim that every planned campaign, quest, animation, environment asset, save-sync service, or production optimization described in the design document is complete. The original game document explicitly places substantial story and progression content in future development scope. Device testing is still required before a public release.
-
-## Android identity
-
-- Application ID (debug): `com.glyphfall.game.debug`
-- Minimum Android: 7.0 / API 24
-- Target Android: API 36
-- Screen: landscape
+The previous Three.js/WebView prototype remains in `app/src/main/assets/index.html` and can still be built through `.github/workflows/android-apk.yml`.
