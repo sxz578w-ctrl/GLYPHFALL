@@ -285,7 +285,7 @@ func _build_main_menu() -> void:
     slogan.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     slogan.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     footer.add_child(slogan)
-    var version := _label("GLYPHFALL  •  NATIVE EDITION  0.2", 10, Color(0.45, 0.65, 0.82))
+    var version := _label("GLYPHFALL  •  NATIVE EDITION  0.3.0", 10, Color(0.45, 0.65, 0.82))
     footer.add_child(version)
     page.add_child(footer)
 
